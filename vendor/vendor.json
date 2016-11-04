@@ -1,0 +1,71 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"path": "github.com/emicklei/go-restful",
+			"revision": "c795848f1d7f574bbf767a8f17c7357e4003fed6",
+			"revisionTime": "2016-09-19T11:52:21+02:00"
+		},
+		{
+			"path": "github.com/emicklei/go-restful/log",
+			"revision": "c795848f1d7f574bbf767a8f17c7357e4003fed6",
+			"revisionTime": "2016-09-19T11:52:21+02:00"
+		},
+		{
+			"path": "github.com/emicklei/go-restful/swagger",
+			"revision": "c795848f1d7f574bbf767a8f17c7357e4003fed6",
+			"revisionTime": "2016-09-19T11:52:21+02:00"
+		},
+		{
+			"path": "github.com/emicklei/go-selfdiagnose",
+			"revision": "3bd9c630af8d1c8452dab624f8a5d4c91a7fb2cb",
+			"revisionTime": "2016-08-29T16:40:28+02:00"
+		},
+		{
+			"path": "github.com/go-stack/stack",
+			"revision": "100eb0c0a9c5b306ca2fb4f165df21d80ada4b82",
+			"revisionTime": "2016-05-13T23:44:11-04:00"
+		},
+		{
+			"path": "github.com/inconshreveable/log15",
+			"revision": "f1f14b426c23e20a73468078b52d0713a16a132a",
+			"revisionTime": "2016-08-10T12:45:28-07:00"
+		},
+		{
+			"path": "github.com/inconshreveable/log15/term",
+			"revision": "f1f14b426c23e20a73468078b52d0713a16a132a",
+			"revisionTime": "2016-08-10T12:45:28-07:00"
+		},
+		{
+			"path": "github.com/mattn/go-colorable",
+			"revision": "ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8",
+			"revisionTime": "2016-08-01T08:54:17+09:00"
+		},
+		{
+			"path": "github.com/mattn/go-isatty",
+			"revision": "56b76bdf51f7708750eac80fa38b952bb9f32639",
+			"revisionTime": "2015-12-11T09:06:21+09:00"
+		},
+		{
+			"path": "golang.org/x/sys/unix",
+			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+			"revisionTime": "2016-07-15T15:43:45+10:00"
+		},
+		{
+			"path": "gopkg.in/inconshreveable/log15.v2",
+			"revision": "b105bd37f74e5d9dc7b6ad7806715c7a2b83fd3f",
+			"revisionTime": "2015-09-21T14:38:54-07:00"
+		},
+		{
+			"path": "gopkg.in/inconshreveable/log15.v2/stack",
+			"revision": "b105bd37f74e5d9dc7b6ad7806715c7a2b83fd3f",
+			"revisionTime": "2015-09-21T14:38:54-07:00"
+		},
+		{
+			"path": "gopkg.in/inconshreveable/log15.v2/term",
+			"revision": "b105bd37f74e5d9dc7b6ad7806715c7a2b83fd3f",
+			"revisionTime": "2015-09-21T14:38:54-07:00"
+		}
+	]
+}
