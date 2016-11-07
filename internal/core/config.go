@@ -8,7 +8,7 @@ import (
 	"github.com/gerbenjacobs/snaketrap/internal/hipchat"
 )
 
-func ReadConfig(port *int, hcClient *hipchat.Client) (cfgMap map[string]json.RawMessage, err error) {
+func ReadConfig(addr *string, hcClient *hipchat.Client) (cfgMap map[string]json.RawMessage, err error) {
 	jsData, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func ReadConfig(port *int, hcClient *hipchat.Client) (cfgMap map[string]json.Raw
 
 	}
 
-	err = json.Unmarshal(cfgMap["port"], &port)
+	err = json.Unmarshal(cfgMap["addr"], &addr)
 	if err != nil {
 		return nil, err
 	}

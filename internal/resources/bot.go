@@ -93,25 +93,8 @@ func (b BotResource) Bind(container *restful.Container) {
 		Reads(hipchat.Request{}).
 		Writes(hipchat.Response{}))
 
-	ws.Route(ws.POST("/notify").To(b.notify).
-		Doc("Sends a notification").
-		Param(ws.QueryParameter("message", "Message to be sent").DataType("string")))
-
 	container.Add(ws)
 }
-
-func (b *BotResource) notify(request *restful.Request, response *restful.Response) {
-	notification := hipchat.NewNotify(hipchat.COLOR_PURPLE, request.QueryParameter("message"))
-	notification.From = "/notify"
-	err := b.client.SendNotification(notification)
-	if err != nil {
-		response.WriteErrorString(http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	response.Write([]byte("OK"))
-}
-
 func (b *BotResource) handleRequest(request *restful.Request, response *restful.Response) {
 	// process request
 	hcReq := new(hipchat.Request)

@@ -3,8 +3,6 @@ package main
 import (
 	"net/http"
 
-	"strconv"
-
 	"os"
 
 	"github.com/emicklei/go-restful"
@@ -17,9 +15,9 @@ import (
 
 func main() {
 	// [*] Configuration
-	var port int
+	var addr string
 	var hcClient hipchat.Client
-	cfgMap, err := core.ReadConfig(&port, &hcClient)
+	cfgMap, err := core.ReadConfig(&addr, &hcClient)
 	if err != nil {
 		log15.Error("failed to read config", "err", err)
 		os.Exit(1)
@@ -48,15 +46,12 @@ func main() {
 	bot.Bind(container)
 	selfdiagnose.Register(bot)
 
-	// [*] Enable swagger, after resources have been bound
-	core.EnableSwagger(container)
-
 	// [*] Bind the main app to the container
 	container.Add(app)
 
 	// [*] Run server
-	log15.Info("Started listening on 0.0.0.0:" + strconv.Itoa(port))
-	err = http.ListenAndServe(":"+strconv.Itoa(port), container)
+	log15.Info("Started listening on " + addr)
+	err = http.ListenAndServe(addr, container)
 	if err != nil {
 		log15.Info("failed to listen and serve", "err", err)
 	}

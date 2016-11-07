@@ -13,11 +13,6 @@
 			"revisionTime": "2016-09-19T11:52:21+02:00"
 		},
 		{
-			"path": "github.com/emicklei/go-restful/swagger",
-			"revision": "c795848f1d7f574bbf767a8f17c7357e4003fed6",
-			"revisionTime": "2016-09-19T11:52:21+02:00"
-		},
-		{
 			"path": "github.com/emicklei/go-selfdiagnose",
 			"revision": "3bd9c630af8d1c8452dab624f8a5d4c91a7fb2cb",
 			"revisionTime": "2016-08-29T16:40:28+02:00"
@@ -51,21 +46,7 @@
 			"path": "golang.org/x/sys/unix",
 			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
 			"revisionTime": "2016-07-15T15:43:45+10:00"
-		},
-		{
-			"path": "gopkg.in/inconshreveable/log15.v2",
-			"revision": "b105bd37f74e5d9dc7b6ad7806715c7a2b83fd3f",
-			"revisionTime": "2015-09-21T14:38:54-07:00"
-		},
-		{
-			"path": "gopkg.in/inconshreveable/log15.v2/stack",
-			"revision": "b105bd37f74e5d9dc7b6ad7806715c7a2b83fd3f",
-			"revisionTime": "2015-09-21T14:38:54-07:00"
-		},
-		{
-			"path": "gopkg.in/inconshreveable/log15.v2/term",
-			"revision": "b105bd37f74e5d9dc7b6ad7806715c7a2b83fd3f",
-			"revisionTime": "2015-09-21T14:38:54-07:00"
 		}
-	]
+	],
+	"rootPath": "github.com/gerbenjacobs/snaketrap"
 }
