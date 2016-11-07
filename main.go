@@ -3,31 +3,27 @@ package main
 import (
 	"net/http"
 
-	"flag"
-
 	"strconv"
 
+	"os"
+
 	"github.com/emicklei/go-restful"
+	"github.com/emicklei/go-selfdiagnose"
 	"github.com/gerbenjacobs/snaketrap/internal/core"
 	"github.com/gerbenjacobs/snaketrap/internal/hipchat"
 	"github.com/gerbenjacobs/snaketrap/internal/resources"
 	"github.com/inconshreveable/log15"
 )
 
-var (
-	port   int
-	hcUrl  string
-	hcAuth string
-	hcRoom int
-)
-
 func main() {
 	// [*] Configuration
-	flag.IntVar(&port, "port", 8080, "The port that the HTTP listener runs on")
-	flag.StringVar(&hcUrl, "hipchat-url", "", "HipChat API endpoint, including version")
-	flag.StringVar(&hcAuth, "hipchat-auth", "", "HipChat auth token")
-	flag.IntVar(&hcRoom, "hipchat-room-id", 0, "HipChat room ID")
-	flag.Parse()
+	var port int
+	var hcClient hipchat.Client
+	cfgMap, err := core.ReadConfig(&port, &hcClient)
+	if err != nil {
+		log15.Error("failed to read config", "err", err)
+		os.Exit(1)
+	}
 
 	// [*] Create the container
 	container := restful.DefaultContainer
@@ -44,9 +40,13 @@ func main() {
 	core.SetupSelfdiagnose(app)
 
 	// Create *your* resources and bind them
-	hc := hipchat.NewClient(hcUrl, hcAuth, hcRoom)
-	bot := resources.NewBotResource(hc)
+	bot, err := resources.NewBotResource(&hcClient, cfgMap)
+	if err != nil {
+		log15.Error("failed to create BotResource", "err", err)
+		os.Exit(1)
+	}
 	bot.Bind(container)
+	selfdiagnose.Register(bot)
 
 	// [*] Enable swagger, after resources have been bound
 	core.EnableSwagger(container)
@@ -56,12 +56,12 @@ func main() {
 
 	// [*] Run server
 	log15.Info("Started listening on 0.0.0.0:" + strconv.Itoa(port))
-	err := http.ListenAndServe(":"+strconv.Itoa(port), container)
+	err = http.ListenAndServe(":"+strconv.Itoa(port), container)
 	if err != nil {
 		log15.Info("failed to listen and serve", "err", err)
 	}
 }
 
 func rootRedirect(req *restful.Request, resp *restful.Response) {
-	http.Redirect(resp.ResponseWriter, req.Request, "/internal/selfdiagnose.html", http.StatusPermanentRedirect)
+	http.Redirect(resp.ResponseWriter, req.Request, "/internal/selfdiagnose.html", http.StatusTemporaryRedirect)
 }

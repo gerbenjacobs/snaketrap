@@ -1,0 +1,20 @@
+{
+  "port": 8080,
+  "hipchat": {
+    "url": "https://bolcom.hipchat.com/v2",
+    "roomId": 3277014,
+    "auth": "Qi0hTtgLMeQekAXPFQCJcux0KKTEPDJwljPpY2ZJ"
+  },
+  "bots": {
+    "sheriff": {
+      "enabled": true,
+      "data": {
+        "users": [
+        ]
+      }
+    },
+    "version": {
+      "enabled": true
+    }
+  }
+}

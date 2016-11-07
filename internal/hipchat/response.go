@@ -39,3 +39,12 @@ func NewNotify(color, message string) *Response {
 		MessageFormat: TYPE_TEXT,
 	}
 }
+
+func NewHelp(message string) *Response {
+	return &Response{
+		Color:         COLOR_YELLOW,
+		Message:       message,
+		Notify:        false,
+		MessageFormat: TYPE_HTML,
+	}
+}

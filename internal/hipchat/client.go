@@ -10,16 +10,16 @@ import (
 )
 
 type Client struct {
-	url          string
-	auth         string
-	default_room int
+	Url         string `json:"url"`
+	Auth        string `json:"auth"`
+	DefaultRoom int    `json:"roomId"`
 }
 
 func NewClient(url, auth string, room int) *Client {
 	return &Client{
-		url:          url,
-		auth:         auth,
-		default_room: room,
+		Url:         url,
+		Auth:        auth,
+		DefaultRoom: room,
 	}
 }
 
@@ -40,7 +40,7 @@ func (c *Client) send(method, url string, body []byte) error {
 }
 
 func (c *Client) SendNotification(notification *Response) error {
-	url := c.url + "/room/" + strconv.Itoa(c.default_room) + "/notification?auth_token=" + c.auth
+	url := c.Url + "/room/" + strconv.Itoa(c.DefaultRoom) + "/notification?auth_token=" + c.Auth
 
 	nb, _ := json.Marshal(notification)
 
@@ -52,7 +52,7 @@ type topicResponse struct {
 }
 
 func (c *Client) ChangeRoomTopic(topic string) error {
-	url := fmt.Sprintf("%s/room/%d/topic?auth_token=%s", c.url, c.default_room, c.auth)
+	url := fmt.Sprintf("%s/room/%d/topic?auth_token=%s", c.Url, c.DefaultRoom, c.Auth)
 
 	tp := topicResponse{topic}
 	body, _ := json.Marshal(tp)

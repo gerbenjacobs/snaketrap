@@ -41,7 +41,14 @@ func (r Request) Username() string {
 	return r.Item.Message.From.MentionName
 }
 
-func (r Request) Bot() string {
+func (r Request) GetWord(n int) string {
 	w := strings.Fields(r.Message())
-	return w[1]
+	if n >= len(w) {
+		return ""
+	}
+	return w[n]
+}
+
+func (r Request) Bot() string {
+	return r.GetWord(1)
 }
