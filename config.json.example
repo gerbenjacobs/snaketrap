@@ -2,7 +2,7 @@
   "addr": "0.0.0.0:8080",
   "hipchat": {
     "url": "",
-    "roomId": 0,
+    "roomId": "",
     "auth": ""
   },
   "bots": {

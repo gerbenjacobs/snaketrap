@@ -5,10 +5,17 @@ import (
 
 	"io/ioutil"
 
-	"github.com/gerbenjacobs/snaketrap/internal/hipchat"
+	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
-func ReadConfig(addr *string, hcClient *hipchat.Client) (cfgMap map[string]json.RawMessage, err error) {
+type HipchatConfig struct {
+	Url         string `json:"url"`
+	Auth        string `json:"auth"`
+	DefaultRoom string `json:"roomId"`
+	Client      *hipchat.Client
+}
+
+func ReadConfig(addr *string, hcConfig *HipchatConfig) (cfgMap map[string]json.RawMessage, err error) {
 	jsData, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		return nil, err
@@ -25,7 +32,7 @@ func ReadConfig(addr *string, hcClient *hipchat.Client) (cfgMap map[string]json.
 		return nil, err
 	}
 
-	err = json.Unmarshal(cfgMap["hipchat"], &hcClient)
+	err = json.Unmarshal(cfgMap["hipchat"], &hcConfig)
 	if err != nil {
 		return nil, err
 	}

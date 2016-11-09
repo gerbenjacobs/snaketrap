@@ -8,7 +8,6 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-selfdiagnose"
 	"github.com/gerbenjacobs/snaketrap/internal/core"
-	"github.com/gerbenjacobs/snaketrap/internal/hipchat"
 	"github.com/gerbenjacobs/snaketrap/internal/resources"
 	"github.com/inconshreveable/log15"
 )
@@ -16,8 +15,8 @@ import (
 func main() {
 	// [*] Configuration
 	var addr string
-	var hcClient hipchat.Client
-	cfgMap, err := core.ReadConfig(&addr, &hcClient)
+	var hcConfig core.HipchatConfig
+	cfgMap, err := core.ReadConfig(&addr, &hcConfig)
 	if err != nil {
 		log15.Error("failed to read config", "err", err)
 		os.Exit(1)
@@ -38,7 +37,7 @@ func main() {
 	core.SetupSelfdiagnose(app)
 
 	// Create *your* resources and bind them
-	bot, err := resources.NewBotResource(&hcClient, cfgMap)
+	bot, err := resources.NewBotResource(&hcConfig, cfgMap)
 	if err != nil {
 		log15.Error("failed to create BotResource", "err", err)
 		os.Exit(1)

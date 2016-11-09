@@ -1,4 +1,4 @@
-package hipchat
+package webhook
 
 import (
 	"encoding/json"

@@ -5,7 +5,8 @@ import (
 
 	"fmt"
 
-	"github.com/gerbenjacobs/snaketrap/internal/hipchat"
+	"github.com/gerbenjacobs/snaketrap/internal/core"
+	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
 type Version struct{}
@@ -18,17 +19,27 @@ func (b Version) Description() string {
 	return "Can look up a version across environments"
 }
 
-func (b Version) Help() *hipchat.Response {
+func (b Version) Help() hipchat.NotificationRequest {
 	help := `
 	%s - %s
 	<br>- /bot version $app - Returns information about $app on all environments
 	`
-	return hipchat.NewHelp(fmt.Sprintf(help, b.Name(), b.Description()))
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorYellow,
+		Message:       fmt.Sprintf(help, b.Name(), b.Description()),
+		Notify:        false,
+		MessageFormat: "html",
+	}
 }
 
-func (b Version) HandleMessage(c *hipchat.Client, req *hipchat.Request) *hipchat.Response {
-	app := req.GetWord(2)
-	return hipchat.NewResponse(hipchat.COLOR_GRAY, fmt.Sprintf("Versions for %s: [tst] 1025.255 [acc] 3636 [xpr] 335 [pro] 3636", app))
+func (b Version) HandleMessage(c *core.HipchatConfig, req *hipchat.RoomMessageRequest) hipchat.NotificationRequest {
+	app := req.Message
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorGray,
+		Message:       fmt.Sprintf("Versions for %s: [tst] 1025.255 [acc] 3636 [xpr] 335 [pro] 3636", app),
+		Notify:        false,
+		MessageFormat: "text",
+	}
 }
 
 func (b Version) HandleConfig(data json.RawMessage) error {

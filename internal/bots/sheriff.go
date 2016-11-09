@@ -7,7 +7,10 @@ import (
 
 	"fmt"
 
-	"github.com/gerbenjacobs/snaketrap/internal/hipchat"
+	"github.com/tbruyelle/hipchat-go/hipchat"
+
+	"github.com/gerbenjacobs/snaketrap/internal/core"
+	"github.com/inconshreveable/log15"
 )
 
 type SheriffConfig struct {
@@ -26,7 +29,7 @@ func (b Sheriff) Description() string {
 	return "A bot that rotates users daily for the engineer on duty role a.k.a. sheriff"
 }
 
-func (b Sheriff) Help() *hipchat.Response {
+func (b Sheriff) Help() hipchat.NotificationRequest {
 	help := `
 	%s - %s
 	<br>- /bot sheriff <strong>next</strong> - Switches to next sheriff
@@ -34,12 +37,27 @@ func (b Sheriff) Help() *hipchat.Response {
 	<br>- /bot sheriff <strong>away</strong> $user - Marks the $user as away
 	<br>- /bot sheriff <strong>back</strong> $user - Marks the $user as back
 	`
-	return hipchat.NewHelp(fmt.Sprintf(help, b.Name(), b.Description()))
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorYellow,
+		Message:       fmt.Sprintf(help, b.Name(), b.Description()),
+		Notify:        false,
+		MessageFormat: "html",
+	}
 }
 
-func (b Sheriff) HandleMessage(c *hipchat.Client, req *hipchat.Request) *hipchat.Response {
-	go c.ChangeRoomTopic("Sheriff of the day - " + time.Now().String())
-	return hipchat.NewResponse(hipchat.COLOR_YELLOW, "Sheriff of the day is: you!")
+func (b Sheriff) HandleMessage(c *core.HipchatConfig, req *hipchat.RoomMessageRequest) hipchat.NotificationRequest {
+	go func() {
+		_, err := c.Client.Room.SetTopic(c.DefaultRoom, "Sheriff of the day - "+time.Now().String())
+		if err != nil {
+			log15.Error("failed to set topic", "err", err)
+		}
+	}()
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorYellow,
+		Message:       "Sheriff of the day is: you!",
+		Notify:        false,
+		MessageFormat: "text",
+	}
 }
 
 func (b Sheriff) HandleConfig(data json.RawMessage) error {

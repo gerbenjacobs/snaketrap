@@ -10,21 +10,38 @@ import (
 
 	"strings"
 
+	"net/url"
+
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-selfdiagnose"
 	"github.com/gerbenjacobs/snaketrap/internal/bots"
-	"github.com/gerbenjacobs/snaketrap/internal/hipchat"
+	"github.com/gerbenjacobs/snaketrap/internal/core"
+	"github.com/gerbenjacobs/snaketrap/internal/webhook"
 	"github.com/inconshreveable/log15"
+	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
-var BotLookup = map[string]bots.Bot{
+type BotConfig struct {
+	Enabled bool            `json:"enabled"`
+	Data    json.RawMessage `json:"data"`
+}
+
+type Bot interface {
+	Name() string
+	Description() string
+	Help() hipchat.NotificationRequest
+	HandleMessage(*core.HipchatConfig, *hipchat.RoomMessageRequest) hipchat.NotificationRequest
+	HandleConfig(json.RawMessage) error
+}
+
+var BotLookup = map[string]Bot{
 	"sheriff": &bots.Sheriff{},
 	"version": &bots.Version{},
 }
 
 type BotResource struct {
-	client *hipchat.Client
-	bots   map[string]bots.Bot
+	config *core.HipchatConfig
+	bots   map[string]Bot
 }
 
 // Selfdiagnose
@@ -41,24 +58,34 @@ func (b BotResource) Comment() string {
 	return "Bots"
 }
 
-func NewBotResource(client *hipchat.Client, cfgMap map[string]json.RawMessage) (*BotResource, error) {
+func NewBotResource(cfg *core.HipchatConfig, cfgMap map[string]json.RawMessage) (*BotResource, error) {
+	// create Hipchat client
+	c := hipchat.NewClient(cfg.Auth)
+	pUrl, err := url.Parse(cfg.Url)
+	if err != nil {
+		return nil, err
+	}
+	c.BaseURL = pUrl
+	cfg.Client = c
+
+	// Configure and return
 	botMap, err := CreateAndConfigureBots(cfgMap)
 	if err != nil {
 		return nil, err
 	}
 	return &BotResource{
-		client: client,
+		config: cfg,
 		bots:   botMap,
 	}, nil
 }
 
-func CreateAndConfigureBots(cfgMap map[string]json.RawMessage) (map[string]bots.Bot, error) {
-	var botConfig map[string]bots.BotConfig
+func CreateAndConfigureBots(cfgMap map[string]json.RawMessage) (map[string]Bot, error) {
+	var botConfig map[string]BotConfig
 	if err := json.Unmarshal(cfgMap["bots"], &botConfig); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal bot config: %v", err)
 	}
 
-	botMap := map[string]bots.Bot{}
+	botMap := map[string]Bot{}
 	for botName, bc := range botConfig {
 		if bc.Enabled {
 			// create
@@ -84,21 +111,17 @@ func (b BotResource) Bind(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
 		Path("/bot").
-		Doc("Entrypoint for the bot").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	ws.Route(ws.POST("").To(b.handleRequest).
-		Doc("Handles incoming requests").
-		Reads(hipchat.Request{}).
-		Writes(hipchat.Response{}))
+	ws.Route(ws.POST("").To(b.handleRequest))
 
 	container.Add(ws)
 }
 func (b *BotResource) handleRequest(request *restful.Request, response *restful.Response) {
 	// process request
-	hcReq := new(hipchat.Request)
-	err := request.ReadEntity(hcReq)
+	req := new(webhook.Request)
+	err := request.ReadEntity(req)
 	if err != nil {
 		log15.Error("failed to read entity", "err", err)
 		response.WriteErrorString(http.StatusInternalServerError, err.Error())
@@ -106,32 +129,36 @@ func (b *BotResource) handleRequest(request *restful.Request, response *restful.
 	}
 
 	// pick bot and create notification
-	botName := hcReq.Bot()
+	botName := req.Bot()
 	if "--help" == botName {
 		// send general help
 		response.WriteEntity(b.HelpMsg())
 		return
 	}
 
-	var notification *hipchat.Response
+	var notification hipchat.NotificationRequest
 	if bot, ok := b.bots[botName]; ok {
-		if "--help" == hcReq.GetWord(2) {
+		if "--help" == req.Message() {
 			notification = bot.Help()
 		} else {
-			notification = bot.HandleMessage(b.client, hcReq)
+			notification = bot.HandleMessage(b.config, &hipchat.RoomMessageRequest{req.Message()})
 		}
 		notification.From = bot.Name()
-		notification.AttachTo = hcReq.Item.Message.ID
 	} else {
-		notification = hipchat.NewResponse(hipchat.COLOR_RED, "I'm sorry, I don't understand that command.")
-		log15.Error("failed to handle request", "bot", botName, "msg", hcReq.Message())
+		notification = hipchat.NotificationRequest{
+			Color:         hipchat.ColorRed,
+			Message:       "I'm sorry, I don't understand that command.",
+			Notify:        false,
+			MessageFormat: "text",
+		}
+		log15.Error("failed to handle request", "bot", botName, "msg", req.Message())
 	}
 
 	// reply :)
 	response.WriteEntity(notification)
 }
 
-func (b BotResource) HelpMsg() *hipchat.Response {
+func (b BotResource) HelpMsg() hipchat.NotificationRequest {
 	bs := []string{}
 	for i := range b.bots {
 		bs = append(bs, i)
@@ -139,5 +166,10 @@ func (b BotResource) HelpMsg() *hipchat.Response {
 
 	help := fmt.Sprintf("Current active bots: %s<br>Use <strong>/bot $name --help</strong> for information per bot", strings.Join(bs, ", "))
 
-	return hipchat.NewHelp(help)
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorYellow,
+		Message:       help,
+		Notify:        false,
+		MessageFormat: "text",
+	}
 }
