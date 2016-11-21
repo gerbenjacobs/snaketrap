@@ -30,8 +30,8 @@ type Bot interface {
 	Name() string
 	Description() string
 	Help() hipchat.NotificationRequest
-	HandleMessage(*core.HipchatConfig, *hipchat.RoomMessageRequest) hipchat.NotificationRequest
-	HandleConfig(json.RawMessage) error
+	HandleMessage(*webhook.Request) hipchat.NotificationRequest
+	HandleConfig(*core.HipchatConfig, json.RawMessage) error
 }
 
 var BotLookup = map[string]Bot{
@@ -69,7 +69,7 @@ func NewBotResource(cfg *core.HipchatConfig, cfgMap map[string]json.RawMessage) 
 	cfg.Client = c
 
 	// Configure and return
-	botMap, err := CreateAndConfigureBots(cfgMap)
+	botMap, err := CreateAndConfigureBots(cfg, cfgMap)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func NewBotResource(cfg *core.HipchatConfig, cfgMap map[string]json.RawMessage) 
 	}, nil
 }
 
-func CreateAndConfigureBots(cfgMap map[string]json.RawMessage) (map[string]Bot, error) {
+func CreateAndConfigureBots(c *core.HipchatConfig, cfgMap map[string]json.RawMessage) (map[string]Bot, error) {
 	var botConfig map[string]BotConfig
 	if err := json.Unmarshal(cfgMap["bots"], &botConfig); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal bot config: %v", err)
@@ -95,7 +95,7 @@ func CreateAndConfigureBots(cfgMap map[string]json.RawMessage) (map[string]Bot, 
 			myBot := BotLookup[botName]
 
 			// configure
-			if err := myBot.HandleConfig(botConfig[botName].Data); err != nil {
+			if err := myBot.HandleConfig(c, botConfig[botName].Data); err != nil {
 				return nil, fmt.Errorf("failed to configure bot [%v]: %v", botName, err)
 			}
 
@@ -138,23 +138,19 @@ func (b *BotResource) handleRequest(request *restful.Request, response *restful.
 
 	var notification hipchat.NotificationRequest
 	if bot, ok := b.bots[botName]; ok {
-		if "--help" == req.Message() {
+		if strings.Contains(req.Message(), "--help") {
 			notification = bot.Help()
 		} else {
-			notification = bot.HandleMessage(b.config, &hipchat.RoomMessageRequest{req.Message()})
+			notification = bot.HandleMessage(req)
 		}
 		notification.From = bot.Name()
 	} else {
-		notification = hipchat.NotificationRequest{
-			Color:         hipchat.ColorRed,
-			Message:       "I'm sorry, I don't understand that command.",
-			Notify:        false,
-			MessageFormat: "text",
-		}
 		log15.Error("failed to handle request", "bot", botName, "msg", req.Message())
+		notification = b.FailedMsg()
 	}
 
 	// reply :)
+	log15.Debug("handled bot request", "from", req.Username(), "message", req.Message(), "reply", notification)
 	response.WriteEntity(notification)
 }
 
@@ -169,6 +165,15 @@ func (b BotResource) HelpMsg() hipchat.NotificationRequest {
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
 		Message:       help,
+		Notify:        false,
+		MessageFormat: "html",
+	}
+}
+
+func (b BotResource) FailedMsg() hipchat.NotificationRequest {
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorRed,
+		Message:       "I'm sorry, I don't understand that command.",
 		Notify:        false,
 		MessageFormat: "text",
 	}

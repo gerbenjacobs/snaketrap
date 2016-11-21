@@ -23,6 +23,11 @@
 			"revisionTime": "2016-05-13T23:44:11-04:00"
 		},
 		{
+			"path": "github.com/google/go-querystring/query",
+			"revision": "9235644dd9e52eeae6fa48efd539fdc351a0af53",
+			"revisionTime": "2016-03-10T17:20:12-08:00"
+		},
+		{
 			"path": "github.com/inconshreveable/log15",
 			"revision": "f1f14b426c23e20a73468078b52d0713a16a132a",
 			"revisionTime": "2016-08-10T12:45:28-07:00"
@@ -41,6 +46,11 @@
 			"path": "github.com/mattn/go-isatty",
 			"revision": "56b76bdf51f7708750eac80fa38b952bb9f32639",
 			"revisionTime": "2015-12-11T09:06:21+09:00"
+		},
+		{
+			"path": "github.com/tbruyelle/hipchat-go/hipchat",
+			"revision": "af0adf64ce74b09b6179bde2b5129698fd5eafa7",
+			"revisionTime": "2016-11-02T02:21:08-07:00"
 		},
 		{
 			"path": "golang.org/x/sys/unix",

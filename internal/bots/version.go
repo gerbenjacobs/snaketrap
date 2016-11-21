@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/gerbenjacobs/snaketrap/internal/core"
+	"github.com/gerbenjacobs/snaketrap/internal/webhook"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
@@ -32,8 +33,8 @@ func (b Version) Help() hipchat.NotificationRequest {
 	}
 }
 
-func (b Version) HandleMessage(c *core.HipchatConfig, req *hipchat.RoomMessageRequest) hipchat.NotificationRequest {
-	app := req.Message
+func (b Version) HandleMessage(req *webhook.Request) hipchat.NotificationRequest {
+	app := req.Message()
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorGray,
 		Message:       fmt.Sprintf("Versions for %s: [tst] 1025.255 [acc] 3636 [xpr] 335 [pro] 3636", app),
@@ -42,6 +43,6 @@ func (b Version) HandleMessage(c *core.HipchatConfig, req *hipchat.RoomMessageRe
 	}
 }
 
-func (b Version) HandleConfig(data json.RawMessage) error {
+func (b Version) HandleConfig(c *core.HipchatConfig, data json.RawMessage) error {
 	return nil
 }
