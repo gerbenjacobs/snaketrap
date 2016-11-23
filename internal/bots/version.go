@@ -10,7 +10,9 @@ import (
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
-type Version struct{}
+type Version struct {
+	w *core.Wrangler
+}
 
 func (b Version) Name() string {
 	return "Versionista"
@@ -43,6 +45,7 @@ func (b Version) HandleMessage(req *webhook.Request) hipchat.NotificationRequest
 	}
 }
 
-func (b Version) HandleConfig(c *core.HipchatConfig, data json.RawMessage) error {
+func (b Version) HandleConfig(wrangler *core.Wrangler, data json.RawMessage) error {
+	b.w = wrangler
 	return nil
 }

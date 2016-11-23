@@ -17,7 +17,7 @@ func createSheriff() *Sheriff {
 			"davecheney",
 		},
 	}
-	s.hipchatCfg = &core.HipchatConfig{
+	s.wrangler = &core.Wrangler{
 		DefaultRoom: "1234",
 	}
 	s.boot()

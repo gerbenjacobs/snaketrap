@@ -15,8 +15,8 @@ import (
 func main() {
 	// [*] Configuration
 	var addr string
-	var hcConfig core.HipchatConfig
-	cfgMap, err := core.ReadConfig(&addr, &hcConfig)
+	var wrangler core.Wrangler
+	err := core.ReadConfig(&addr, &wrangler)
 	if err != nil {
 		log15.Error("failed to read config", "err", err)
 		os.Exit(1)
@@ -37,7 +37,7 @@ func main() {
 	core.SetupSelfdiagnose(app)
 
 	// Create *your* resources and bind them
-	bot, err := resources.NewBotResource(&hcConfig, cfgMap)
+	bot, err := resources.NewBotResource(&wrangler)
 	if err != nil {
 		log15.Error("failed to create BotResource", "err", err)
 		os.Exit(1)

@@ -31,7 +31,7 @@ type Bot interface {
 	Description() string
 	Help() hipchat.NotificationRequest
 	HandleMessage(*webhook.Request) hipchat.NotificationRequest
-	HandleConfig(*core.HipchatConfig, json.RawMessage) error
+	HandleConfig(*core.Wrangler, json.RawMessage) error
 }
 
 var BotLookup = map[string]Bot{
@@ -40,8 +40,8 @@ var BotLookup = map[string]Bot{
 }
 
 type BotResource struct {
-	config *core.HipchatConfig
-	bots   map[string]Bot
+	wrangler *core.Wrangler
+	bots     map[string]Bot
 }
 
 // Selfdiagnose
@@ -58,30 +58,30 @@ func (b BotResource) Comment() string {
 	return "Bots"
 }
 
-func NewBotResource(cfg *core.HipchatConfig, cfgMap map[string]json.RawMessage) (*BotResource, error) {
+func NewBotResource(wrangler *core.Wrangler) (*BotResource, error) {
 	// create Hipchat client
-	c := hipchat.NewClient(cfg.Auth)
-	pUrl, err := url.Parse(cfg.Url)
+	c := hipchat.NewClient(wrangler.Auth)
+	pUrl, err := url.Parse(wrangler.Url)
 	if err != nil {
 		return nil, err
 	}
 	c.BaseURL = pUrl
-	cfg.Client = c
+	wrangler.Client = c
 
 	// Configure and return
-	botMap, err := CreateAndConfigureBots(cfg, cfgMap)
+	botMap, err := CreateAndConfigureBots(wrangler)
 	if err != nil {
 		return nil, err
 	}
 	return &BotResource{
-		config: cfg,
-		bots:   botMap,
+		wrangler: wrangler,
+		bots:     botMap,
 	}, nil
 }
 
-func CreateAndConfigureBots(c *core.HipchatConfig, cfgMap map[string]json.RawMessage) (map[string]Bot, error) {
+func CreateAndConfigureBots(wrangler *core.Wrangler) (map[string]Bot, error) {
 	var botConfig map[string]BotConfig
-	if err := json.Unmarshal(cfgMap["bots"], &botConfig); err != nil {
+	if err := json.Unmarshal(wrangler.RawData["bots"], &botConfig); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal bot config: %v", err)
 	}
 
@@ -95,7 +95,7 @@ func CreateAndConfigureBots(c *core.HipchatConfig, cfgMap map[string]json.RawMes
 			myBot := BotLookup[botName]
 
 			// configure
-			if err := myBot.HandleConfig(c, botConfig[botName].Data); err != nil {
+			if err := myBot.HandleConfig(wrangler, botConfig[botName].Data); err != nil {
 				return nil, fmt.Errorf("failed to configure bot [%v]: %v", botName, err)
 			}
 

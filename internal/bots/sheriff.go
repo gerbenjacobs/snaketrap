@@ -26,7 +26,7 @@ type SheriffConfig struct {
 
 type Sheriff struct {
 	sheriffCfg     SheriffConfig
-	hipchatCfg     *core.HipchatConfig
+	wrangler       *core.Wrangler
 	currentSheriff int
 }
 
@@ -102,7 +102,7 @@ func (b *Sheriff) HandleMessage(req *webhook.Request) hipchat.NotificationReques
 	}
 }
 
-func (b *Sheriff) HandleConfig(c *core.HipchatConfig, data json.RawMessage) error {
+func (b *Sheriff) HandleConfig(w *core.Wrangler, data json.RawMessage) error {
 	var cfg SheriffConfig
 	err := json.Unmarshal(data, &cfg)
 	if err != nil {
@@ -111,7 +111,7 @@ func (b *Sheriff) HandleConfig(c *core.HipchatConfig, data json.RawMessage) erro
 
 	// add config and boot
 	b.sheriffCfg = cfg
-	b.hipchatCfg = c
+	b.wrangler = w
 	b.boot()
 
 	return nil
@@ -181,10 +181,10 @@ func (b *Sheriff) unknown() hipchat.NotificationRequest {
 }
 
 func (b *Sheriff) changeSheriff() {
-	if b.hipchatCfg.Client != nil {
+	if b.wrangler.Client != nil {
 		go func() {
 			topic := fmt.Sprintf(b.sheriffCfg.Topic, b.sheriffName())
-			_, err := b.hipchatCfg.Client.Room.SetTopic(b.hipchatCfg.DefaultRoom, topic+" - "+time.Now().String())
+			_, err := b.wrangler.Client.Room.SetTopic(b.wrangler.DefaultRoom, topic+" - "+time.Now().String())
 			if err != nil {
 				log15.Error("failed to set topic", "err", err)
 			}
