@@ -152,7 +152,7 @@ func (b *BotResource) handleRequest(request *restful.Request, response *restful.
 		response.WriteEntity(notification)
 	} else {
 		// received call, but nothing to reply
-		response.WriteHeader(201)
+		response.WriteHeader(204)
 	}
 }
 
