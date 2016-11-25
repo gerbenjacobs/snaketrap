@@ -26,22 +26,14 @@ type BotConfig struct {
 	Data    json.RawMessage `json:"data"`
 }
 
-type Bot interface {
-	Name() string
-	Description() string
-	Help() hipchat.NotificationRequest
-	HandleMessage(*webhook.Request) hipchat.NotificationRequest
-	HandleConfig(*core.Wrangler, json.RawMessage) error
-}
-
-var BotLookup = map[string]Bot{
+var BotLookup = map[string]core.Bot{
 	"sheriff": &bots.Sheriff{},
 	"version": &bots.Version{},
 }
 
 type BotResource struct {
 	wrangler *core.Wrangler
-	bots     map[string]Bot
+	bots     map[string]core.Bot
 }
 
 // Selfdiagnose
@@ -59,14 +51,17 @@ func (b BotResource) Comment() string {
 }
 
 func NewBotResource(wrangler *core.Wrangler) (*BotResource, error) {
-	// create Hipchat client
-	c := hipchat.NewClient(wrangler.Auth)
+	// create Hipchat clients
+	c := hipchat.NewClient(wrangler.ScopeAuth)
+	b := hipchat.NewClient(wrangler.BotAuth)
 	pUrl, err := url.Parse(wrangler.Url)
 	if err != nil {
 		return nil, err
 	}
 	c.BaseURL = pUrl
+	b.BaseURL = pUrl
 	wrangler.Client = c
+	wrangler.SetBotClient(b)
 
 	// Configure and return
 	botMap, err := CreateAndConfigureBots(wrangler)
@@ -79,13 +74,13 @@ func NewBotResource(wrangler *core.Wrangler) (*BotResource, error) {
 	}, nil
 }
 
-func CreateAndConfigureBots(wrangler *core.Wrangler) (map[string]Bot, error) {
+func CreateAndConfigureBots(wrangler *core.Wrangler) (map[string]core.Bot, error) {
 	var botConfig map[string]BotConfig
 	if err := json.Unmarshal(wrangler.RawData["bots"], &botConfig); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal bot config: %v", err)
 	}
 
-	botMap := map[string]Bot{}
+	botMap := map[string]core.Bot{}
 	for botName, bc := range botConfig {
 		if bc.Enabled {
 			// create
@@ -137,11 +132,12 @@ func (b *BotResource) handleRequest(request *restful.Request, response *restful.
 	}
 
 	var notification hipchat.NotificationRequest
+	var use bool
 	if bot, ok := b.bots[botName]; ok {
 		if strings.Contains(req.Message(), "--help") {
 			notification = bot.Help()
 		} else {
-			notification = bot.HandleMessage(req)
+			notification, use = bot.HandleMessage(req)
 		}
 		notification.From = bot.Name()
 	} else {
@@ -150,8 +146,14 @@ func (b *BotResource) handleRequest(request *restful.Request, response *restful.
 	}
 
 	// reply :)
-	log15.Debug("handled bot request", "from", req.Username(), "message", req.Message(), "reply", notification)
-	response.WriteEntity(notification)
+	log15.Debug("handled bot request", "from", req.Username(), "message", req.Message(), "replying", use, "notification", notification)
+	if use {
+		// send back notification
+		response.WriteEntity(notification)
+	} else {
+		// received call, but nothing to reply
+		response.WriteHeader(201)
+	}
 }
 
 func (b BotResource) HelpMsg() hipchat.NotificationRequest {

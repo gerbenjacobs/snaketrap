@@ -75,30 +75,39 @@ func (b *Sheriff) extractAction(cmd string) string {
 	w := strings.Fields(cmd)
 
 	if len(w) >= 3 {
-		// We can expect: /bot sheriff $action
-		for _, v := range []string{"next", "previous", "away", "back"} {
-			if w[2] == v {
-				return v
-			}
-		}
+		return w[2]
 	}
 
 	return ""
 }
 
-func (b *Sheriff) HandleMessage(req *webhook.Request) hipchat.NotificationRequest {
+func (b *Sheriff) HandleMessage(req *webhook.Request) (r hipchat.NotificationRequest, useNotification bool) {
+	useNotification = false
 	action := b.extractAction(req.Message())
 	switch action {
 	case "next":
-		return b.next()
+		return b.next(), true
 	case "previous":
-		return b.previous()
+		return b.previous(), true
 	case "away":
-		return b.status(true)
+		return b.status(req, true), true
 	case "back":
-		return b.status(false)
+		return b.status(req, false), true
+	case "list":
+		return b.list(), true
+	case "test":
+		go func() {
+			n := hipchat.NotificationRequest{
+				Color:         hipchat.ColorPurple,
+				Message:       "We are sending a test notification! Thanks, " + req.Username(),
+				Notify:        false,
+				MessageFormat: "text",
+			}
+			b.wrangler.SendNotification(b, &n)
+		}()
+		return
 	default:
-		return b.unknown()
+		return b.unknown(), true
 	}
 }
 
@@ -107,6 +116,11 @@ func (b *Sheriff) HandleConfig(w *core.Wrangler, data json.RawMessage) error {
 	err := json.Unmarshal(data, &cfg)
 	if err != nil {
 		return err
+	}
+
+	// do we have sheriffs?
+	if len(cfg.Users) == 0 {
+		return fmt.Errorf("you have not supplied sheriffs in the 'users' field")
 	}
 
 	// add config and boot
@@ -123,9 +137,6 @@ func (b *Sheriff) boot() {
 
 	// sort sheriffs
 	sort.Strings(b.sheriffCfg.Users)
-
-	// pick first sheriff
-	b.pickFirst()
 }
 
 func (b *Sheriff) next() hipchat.NotificationRequest {
@@ -134,7 +145,6 @@ func (b *Sheriff) next() hipchat.NotificationRequest {
 		// wrap around
 		b.currentSheriff = 0
 	}
-	log15.Debug("switching to next sheriff", "sheriff", b.sheriffName())
 	b.changeSheriff()
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
@@ -149,7 +159,6 @@ func (b *Sheriff) previous() hipchat.NotificationRequest {
 	if b.currentSheriff < 0 {
 		b.currentSheriff = len(b.sheriffCfg.Users) - 1
 	}
-	log15.Debug("switching to previous sheriff", "sheriff", b.sheriffName())
 	b.changeSheriff()
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
@@ -159,13 +168,20 @@ func (b *Sheriff) previous() hipchat.NotificationRequest {
 	}
 }
 
-func (b *Sheriff) status(away bool) hipchat.NotificationRequest {
-	status := "away"
-	user := "you"
-	log15.Debug("settings status of %s to %s", "user", user, "status", status)
+func (b *Sheriff) status(req *webhook.Request, away bool) hipchat.NotificationRequest {
+	user := req.Username()
+	status := ""
+	msg := ""
+	if away {
+		status = "away"
+		msg = "Bye! :-*"
+	} else {
+		status = "back"
+		msg = "Welcome back! :-D"
+	}
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
-		Message:       "Marked $user as $status",
+		Message:       fmt.Sprintf("Marking user %s as %s. %s", user, status, msg),
 		Notify:        false,
 		MessageFormat: "text",
 	}
@@ -180,28 +196,27 @@ func (b *Sheriff) unknown() hipchat.NotificationRequest {
 	}
 }
 
+func (b *Sheriff) list() hipchat.NotificationRequest {
+	sheriffs := strings.Join(b.sheriffCfg.Users, "<br>")
+
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorGray,
+		Message:       fmt.Sprintf("These are the sheriffs of the town:<br>%s", sheriffs),
+		Notify:        false,
+		MessageFormat: "html",
+	}
+}
+
 func (b *Sheriff) changeSheriff() {
 	if b.wrangler.Client != nil {
 		go func() {
 			topic := fmt.Sprintf(b.sheriffCfg.Topic, b.sheriffName())
-			_, err := b.wrangler.Client.Room.SetTopic(b.wrangler.DefaultRoom, topic+" - "+time.Now().String())
+			_, err := b.wrangler.Client.Room.SetTopic(b.wrangler.DefaultRoom, topic)
 			if err != nil {
 				log15.Error("failed to set topic", "err", err)
 			}
 		}()
 	}
-}
-
-func (b *Sheriff) pickFirst() {
-	if len(b.sheriffCfg.Users) == 0 {
-		// no sheriffs to pick from
-		// TODO: This is hacky?
-		b.currentSheriff = -1
-		log15.Error("no sheriffs are configured")
-		return
-	}
-
-	log15.Debug("picking first sheriff", "sheriff", b.sheriffName())
 }
 
 func (b *Sheriff) sheriffName() string {

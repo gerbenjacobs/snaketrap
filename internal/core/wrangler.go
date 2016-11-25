@@ -5,18 +5,30 @@ import (
 
 	"io/ioutil"
 
+	"github.com/gerbenjacobs/snaketrap/internal/webhook"
+	"github.com/inconshreveable/log15"
 	"github.com/tbruyelle/hipchat-go/hipchat"
-	"gopkg.in/inconshreveable/log15.v2"
 )
 
 // Wrangler is the object that holds the configuration, HipChat client
 // and has several general methods
 type Wrangler struct {
 	Url         string `json:"url"`
-	Auth        string `json:"auth"`
-	DefaultRoom string `json:"roomId"`
+	BotAuth     string `json:"bot_auth"`
+	ScopeAuth   string `json:"scope_auth"`
+	DefaultRoom string `json:"room_id"`
 	Client      *hipchat.Client
+	botClient   *hipchat.Client
 	RawData     map[string]json.RawMessage
+}
+
+// Bot is the interface uses for the small bots used by the wrangler
+type Bot interface {
+	Name() string
+	Description() string
+	Help() hipchat.NotificationRequest
+	HandleMessage(*webhook.Request) (hipchat.NotificationRequest, bool)
+	HandleConfig(*Wrangler, json.RawMessage) error
 }
 
 func ReadConfig(addr *string, wrangler *Wrangler) error {
@@ -51,6 +63,12 @@ func ReadConfig(addr *string, wrangler *Wrangler) error {
 	return nil
 }
 
-func (w *Wrangler) sendNotification(n *hipchat.NotificationRequest) {
+func (w *Wrangler) SetBotClient(c *hipchat.Client) {
+	w.botClient = c
+}
+
+func (w *Wrangler) SendNotification(b Bot, n *hipchat.NotificationRequest) {
+	n.From = b.Name()
 	log15.Info("Trying to send general Bot notification", "n", n)
+	w.botClient.Room.Notification(w.DefaultRoom, n)
 }

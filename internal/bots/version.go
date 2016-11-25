@@ -35,14 +35,14 @@ func (b Version) Help() hipchat.NotificationRequest {
 	}
 }
 
-func (b Version) HandleMessage(req *webhook.Request) hipchat.NotificationRequest {
+func (b Version) HandleMessage(req *webhook.Request) (hipchat.NotificationRequest, bool) {
 	app := req.Message()
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorGray,
 		Message:       fmt.Sprintf("Versions for %s: [tst] 1025.255 [acc] 3636 [xpr] 335 [pro] 3636", app),
 		Notify:        false,
 		MessageFormat: "text",
-	}
+	}, true
 }
 
 func (b Version) HandleConfig(wrangler *core.Wrangler, data json.RawMessage) error {
