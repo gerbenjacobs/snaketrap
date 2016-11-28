@@ -132,22 +132,24 @@ func (b *BotResource) handleRequest(request *restful.Request, response *restful.
 	}
 
 	var notification hipchat.NotificationRequest
-	var use bool
+	var sendReply bool
 	if bot, ok := b.bots[botName]; ok {
 		if strings.Contains(req.Message(), "--help") {
 			notification = bot.Help()
+			sendReply = true
 		} else {
-			notification, use = bot.HandleMessage(req)
+			notification, sendReply = bot.HandleMessage(req)
 		}
 		notification.From = bot.Name()
 	} else {
 		log15.Error("failed to handle request", "bot", botName, "msg", req.Message())
 		notification = b.FailedMsg()
+		sendReply = true
 	}
 
 	// reply :)
-	log15.Debug("handled bot request", "from", req.Username(), "message", req.Message(), "replying", use, "notification", notification)
-	if use {
+	log15.Debug("handled bot request", "from", req.Username(), "message", req.Message(), "replying", sendReply, "notification", notification)
+	if sendReply {
 		// send back notification
 		response.WriteEntity(notification)
 	} else {
