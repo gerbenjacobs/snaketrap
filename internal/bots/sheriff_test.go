@@ -9,6 +9,7 @@ import (
 func createSheriff() *Sheriff {
 	s := &Sheriff{}
 	s.sheriffCfg = SheriffConfig{
+		Days:  []int{1, 2, 3, 4, 5},
 		Time:  "12:00",
 		Topic: "Current sheriff: %s - Some MOTD here..",
 		Users: []string{
@@ -59,32 +60,5 @@ func TestSheriffPreviousWrapAround(t *testing.T) {
 	got = s.currentSheriff
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
-	}
-}
-
-func TestSheriffExtractAction(t *testing.T) {
-	s := createSheriff()
-
-	testCases := []struct {
-		in   string
-		want string
-	}{
-		{"/bot sheriff next", "next"},
-		{"/bot sheriff previous", "previous"},
-		{"/bot sheriff away", "away"},
-		{"/bot sheriff back", "back"},
-
-		{"/bot sheriff remove", ""},
-		{"/bot sheriff status back", ""},
-		{"/bot sheriff ", ""},
-		{"/bot sheriff", ""},
-		{"/bot sheriff --help", ""},
-	}
-
-	for _, each := range testCases {
-		got := s.extractAction(each.in)
-		if got != each.want {
-			t.Errorf("failed to extract action, got: %s want: %s", got, each.want)
-		}
 	}
 }

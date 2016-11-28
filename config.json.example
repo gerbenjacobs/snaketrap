@@ -10,8 +10,10 @@
     "sheriff": {
       "enabled": true,
       "data": {
-        "users": [
-        ]
+        "days": [1,2,3,4,5],
+        "time": "09:00",
+        "topic": "Current sheriff: %s - MOTD here..",
+        "users": []
       }
     },
     "version": {

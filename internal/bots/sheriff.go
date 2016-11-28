@@ -19,6 +19,7 @@ import (
 )
 
 type SheriffConfig struct {
+	Days  []int    `json:"days"`
 	Time  string   `json:"time"`
 	Topic string   `json:"topic"`
 	Users []string `json:"users"`
@@ -38,8 +39,7 @@ func (b *Sheriff) ticker() {
 			select {
 			case <-ticker.C:
 				now := time.Now()
-				//log15.Debug("msg", "now", now, "fmt", now.Format("15:04:05"), "cfg", fmtTime)
-				if now.Format("15:04:05") == fmtTime {
+				if b.isActiveDay() && now.Format("15:04:05") == fmtTime {
 					b.next()
 				}
 			}
@@ -221,4 +221,13 @@ func (b *Sheriff) changeSheriff() {
 
 func (b *Sheriff) sheriffName() string {
 	return b.sheriffCfg.Users[b.currentSheriff]
+}
+
+func (b *Sheriff) isActiveDay() bool {
+	for _, d := range b.sheriffCfg.Days {
+		if int(time.Now().Weekday()) == d {
+			return true
+		}
+	}
+	return false
 }
