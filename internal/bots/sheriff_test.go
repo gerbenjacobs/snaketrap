@@ -8,7 +8,7 @@ import (
 
 func createSheriff() *Sheriff {
 	s := &Sheriff{}
-	s.sheriffCfg = SheriffConfig{
+	s.config = SheriffConfig{
 		Days:  []int{1, 2, 3, 4, 5},
 		Time:  "12:00",
 		Topic: "Current sheriff: %s - Some MOTD here..",
@@ -30,7 +30,7 @@ func TestSheriffNext(t *testing.T) {
 
 	// validate current sheriff
 	want := 0 // "davecheney"
-	got := s.currentSheriff
+	got := s.current
 	if got != want {
 		t.Errorf("wrong sheriff. Got: %d Want: %d", got, want)
 	}
@@ -38,7 +38,7 @@ func TestSheriffNext(t *testing.T) {
 	// trigger next and validate
 	s.next()
 	want = 1 // "gerben"
-	got = s.currentSheriff
+	got = s.current
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
 	}
@@ -49,7 +49,7 @@ func TestSheriffPreviousWrapAround(t *testing.T) {
 
 	// validate current sheriff
 	want := 0 // "davecheney"
-	got := s.currentSheriff
+	got := s.current
 	if got != want {
 		t.Errorf("wrong sheriff. Got: %d Want: %d", got, want)
 	}
@@ -57,7 +57,7 @@ func TestSheriffPreviousWrapAround(t *testing.T) {
 	// trigger next and validate
 	s.previous()
 	want = 2 // "robpike"
-	got = s.currentSheriff
+	got = s.current
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
 	}

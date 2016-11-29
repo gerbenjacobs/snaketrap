@@ -19,21 +19,29 @@ import (
 )
 
 type SheriffConfig struct {
-	Days  []int    `json:"days"`
-	Time  string   `json:"time"`
-	Topic string   `json:"topic"`
-	Users []string `json:"users"`
+	Days         []int        `json:"days"`
+	Time         string       `json:"time"`
+	Topic        string       `json:"topic"`
+	Users        []string     `json:"users"`
+	SheriffUsers SheriffUsers `json:"-"`
 }
 
 type Sheriff struct {
-	sheriffCfg     SheriffConfig
-	wrangler       *core.Wrangler
-	currentSheriff int
+	config   SheriffConfig
+	wrangler *core.Wrangler
+	current  int
+}
+
+type SheriffUsers []SheriffUser
+
+type SheriffUser struct {
+	Name   string
+	Status bool
 }
 
 func (b *Sheriff) ticker() {
 	ticker := time.NewTicker(1 * time.Second)
-	fmtTime := fmt.Sprintf("%s:00", b.sheriffCfg.Time)
+	fmtTime := fmt.Sprintf("%s:00", b.config.Time)
 	go func() {
 		for {
 			select {
@@ -52,7 +60,7 @@ func (b *Sheriff) Name() string {
 }
 
 func (b *Sheriff) Description() string {
-	return fmt.Sprintf("A bot that rotates users daily for the engineer on duty role a.k.a. sheriff. Current sheriff: %s Refresh time: %s", b.sheriffName(), b.sheriffCfg.Time)
+	return fmt.Sprintf("A bot that rotates users daily for the engineer on duty role a.k.a. sheriff. Current sheriff: %s Refresh time: %s", b.sheriffName(), b.config.Time)
 }
 
 func (b *Sheriff) Help() hipchat.NotificationRequest {
@@ -124,7 +132,7 @@ func (b *Sheriff) HandleConfig(w *core.Wrangler, data json.RawMessage) error {
 	}
 
 	// add config and boot
-	b.sheriffCfg = cfg
+	b.config = cfg
 	b.wrangler = w
 	b.boot()
 
@@ -135,15 +143,23 @@ func (b *Sheriff) boot() {
 	// start ticker
 	b.ticker()
 
+	// create SheriffUsers
+	for _, u := range b.config.Users {
+		b.config.SheriffUsers = append(b.config.SheriffUsers, SheriffUser{
+			Name:   u,
+			Status: false,
+		})
+	}
+
 	// sort sheriffs
-	sort.Strings(b.sheriffCfg.Users)
+	sort.Sort(b.config.SheriffUsers)
 }
 
 func (b *Sheriff) next() hipchat.NotificationRequest {
-	b.currentSheriff++
-	if b.currentSheriff > len(b.sheriffCfg.Users) {
+	b.current++
+	if b.current > len(b.config.SheriffUsers) {
 		// wrap around
-		b.currentSheriff = 0
+		b.current = 0
 	}
 	b.changeSheriff()
 	return hipchat.NotificationRequest{
@@ -155,9 +171,9 @@ func (b *Sheriff) next() hipchat.NotificationRequest {
 }
 
 func (b *Sheriff) previous() hipchat.NotificationRequest {
-	b.currentSheriff--
-	if b.currentSheriff < 0 {
-		b.currentSheriff = len(b.sheriffCfg.Users) - 1
+	b.current--
+	if b.current < 0 {
+		b.current = len(b.config.SheriffUsers) - 1
 	}
 	b.changeSheriff()
 	return hipchat.NotificationRequest{
@@ -170,6 +186,15 @@ func (b *Sheriff) previous() hipchat.NotificationRequest {
 
 func (b *Sheriff) status(req *webhook.Request, away bool) hipchat.NotificationRequest {
 	user := req.Username()
+
+	// store status
+	for i, u := range b.config.SheriffUsers {
+		if u.Name == user {
+			b.config.SheriffUsers[i].Status = away
+		}
+	}
+
+	// send reply
 	status := ""
 	msg := ""
 	if away {
@@ -197,20 +222,36 @@ func (b *Sheriff) unknown() hipchat.NotificationRequest {
 }
 
 func (b *Sheriff) list() hipchat.NotificationRequest {
-	sheriffs := strings.Join(b.sheriffCfg.Users, "<br>")
+	n := []string{}
+	for _, u := range b.config.SheriffUsers {
+		n = append(n, u.sheriffStatus()+" "+u.Name)
+	}
+	sheriffs := strings.Join(n, "\n")
 
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorGray,
-		Message:       fmt.Sprintf("These are the sheriffs of the town:<br>%s", sheriffs),
+		Message:       fmt.Sprintf("These are the sheriffs of the town:\n%s", sheriffs),
 		Notify:        false,
-		MessageFormat: "html",
+		MessageFormat: "text",
 	}
+}
+
+func (slice SheriffUsers) Len() int {
+	return len(slice)
+}
+
+func (slice SheriffUsers) Less(i, j int) bool {
+	return slice[i].Name < slice[j].Name
+}
+
+func (slice SheriffUsers) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
 }
 
 func (b *Sheriff) changeSheriff() {
 	if b.wrangler.Client != nil {
 		go func() {
-			topic := fmt.Sprintf(b.sheriffCfg.Topic, b.sheriffName())
+			topic := fmt.Sprintf(b.config.Topic, b.sheriffName())
 			_, err := b.wrangler.Client.Room.SetTopic(b.wrangler.DefaultRoom, topic)
 			if err != nil {
 				log15.Error("failed to set topic", "err", err)
@@ -220,11 +261,19 @@ func (b *Sheriff) changeSheriff() {
 }
 
 func (b *Sheriff) sheriffName() string {
-	return b.sheriffCfg.Users[b.currentSheriff]
+	return b.config.SheriffUsers[b.current].Name
+}
+
+func (u SheriffUser) sheriffStatus() string {
+	if u.Status {
+		return "(failed)"
+	} else {
+		return "(successful)"
+	}
 }
 
 func (b *Sheriff) isActiveDay() bool {
-	for _, d := range b.sheriffCfg.Days {
+	for _, d := range b.config.Days {
 		if int(time.Now().Weekday()) == d {
 			return true
 		}
