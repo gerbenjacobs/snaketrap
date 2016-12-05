@@ -37,7 +37,7 @@ func SetupSelfdiagnose(app *restful.WebService) {
 	app.Route(app.GET("/internal/selfdiagnose.xml").To(handleSelfdiagnose))
 
 	// Register tasks
-	selfdiagnose.Register(ReportHttpRequest{})
+	selfdiagnose.Register(ReportHTTPRequest{})
 	selfdiagnose.Register(ReportHostname{})
 	cpu := selfdiagnose.ReportMessage{
 		Message: fmt.Sprintf("%d CPU available. %d goroutines active", runtime.NumCPU(), runtime.NumGoroutine()),
@@ -60,9 +60,9 @@ func (r ReportBuildAndDate) Comment() string {
 	return "Build information"
 }
 
-type ReportHttpRequest struct{}
+type ReportHTTPRequest struct{}
 
-func (r ReportHttpRequest) Run(ctx *selfdiagnose.Context, result *selfdiagnose.Result) {
+func (r ReportHTTPRequest) Run(ctx *selfdiagnose.Context, result *selfdiagnose.Result) {
 	request, ok := ctx.Variables["http.request"].(*restful.Request)
 	req := request.Request
 	if !ok {
@@ -79,7 +79,7 @@ func (r ReportHttpRequest) Run(ctx *selfdiagnose.Context, result *selfdiagnose.R
 	result.Severity = selfdiagnose.SeverityNone
 }
 
-func (r ReportHttpRequest) Comment() string { return "HTTP Request" }
+func (r ReportHTTPRequest) Comment() string { return "HTTP Request" }
 
 type ReportHostname struct{}
 

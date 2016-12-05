@@ -6,14 +6,13 @@ import (
 	"io/ioutil"
 
 	"github.com/gerbenjacobs/snaketrap/internal/webhook"
-	"github.com/inconshreveable/log15"
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
 // Wrangler is the object that holds the configuration, HipChat client
 // and has several general methods
 type Wrangler struct {
-	Url         string `json:"url"`
+	URL         string `json:"url"`
 	BotAuth     string `json:"bot_auth"`
 	ScopeAuth   string `json:"scope_auth"`
 	DefaultRoom string `json:"room_id"`
@@ -69,6 +68,5 @@ func (w *Wrangler) SetBotClient(c *hipchat.Client) {
 
 func (w *Wrangler) SendNotification(b Bot, n *hipchat.NotificationRequest) {
 	n.From = b.Name()
-	log15.Info("Trying to send general Bot notification", "n", n)
 	w.botClient.Room.Notification(w.DefaultRoom, n)
 }

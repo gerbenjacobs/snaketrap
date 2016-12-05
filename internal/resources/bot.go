@@ -54,12 +54,12 @@ func NewBotResource(wrangler *core.Wrangler) (*BotResource, error) {
 	// create Hipchat clients
 	c := hipchat.NewClient(wrangler.ScopeAuth)
 	b := hipchat.NewClient(wrangler.BotAuth)
-	pUrl, err := url.Parse(wrangler.Url)
+	pURL, err := url.Parse(wrangler.URL)
 	if err != nil {
 		return nil, err
 	}
-	c.BaseURL = pUrl
-	b.BaseURL = pUrl
+	c.BaseURL = pURL
+	b.BaseURL = pURL
 	wrangler.Client = c
 	wrangler.SetBotClient(b)
 

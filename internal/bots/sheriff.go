@@ -49,6 +49,7 @@ func (b *Sheriff) ticker() {
 				now := time.Now()
 				if b.isActiveDay() && now.Format("15:04:05") == fmtTime {
 					b.next()
+					log15.Debug("switching to new sheriff", "sherrif", b.sheriffName(), "time", now)
 				}
 			}
 		}
@@ -267,9 +268,8 @@ func (b *Sheriff) sheriffName() string {
 func (u SheriffUser) sheriffStatus() string {
 	if u.Status {
 		return "(failed)"
-	} else {
-		return "(successful)"
 	}
+	return "(successful)"
 }
 
 func (b *Sheriff) isActiveDay() bool {
