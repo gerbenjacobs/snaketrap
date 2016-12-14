@@ -49,3 +49,7 @@ func (b Version) HandleConfig(wrangler *core.Wrangler, data json.RawMessage) err
 	b.w = wrangler
 	return nil
 }
+
+func (b Version) CurrentState() []byte {
+	return nil
+}
