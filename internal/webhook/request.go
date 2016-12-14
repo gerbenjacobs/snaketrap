@@ -5,7 +5,7 @@ import "strings"
 type Request struct {
 	Event     string `json:"event"`
 	Item      Item   `json:"item"`
-	WebhookId int    `json:"webhook_id"`
+	WebhookID int    `json:"webhook_id"`
 }
 
 type Item struct {
