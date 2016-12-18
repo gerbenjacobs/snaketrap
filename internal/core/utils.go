@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"path/filepath"
-
 	"regexp"
 	"strings"
 )

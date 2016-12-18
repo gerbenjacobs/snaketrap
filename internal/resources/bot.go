@@ -1,16 +1,12 @@
 package resources
 
 import (
-	"net/http"
-
+	"bytes"
 	"encoding/json"
 	"fmt"
-
-	"bytes"
-
-	"strings"
-
+	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-selfdiagnose"

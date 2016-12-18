@@ -2,9 +2,7 @@ package core
 
 import (
 	"encoding/json"
-
 	"io/ioutil"
-
 	"os"
 
 	"github.com/gerbenjacobs/snaketrap/internal/webhook"

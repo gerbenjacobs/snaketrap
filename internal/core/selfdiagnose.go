@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-
 	"strings"
 
 	"github.com/emicklei/go-restful"

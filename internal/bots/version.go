@@ -2,7 +2,6 @@ package bots
 
 import (
 	"encoding/json"
-
 	"fmt"
 
 	"github.com/gerbenjacobs/snaketrap/internal/core"

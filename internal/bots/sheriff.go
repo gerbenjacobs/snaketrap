@@ -1,21 +1,16 @@
 package bots
 
 import (
-	"time"
-
 	"encoding/json"
-
 	"fmt"
-
-	"github.com/tbruyelle/hipchat-go/hipchat"
-
 	"sort"
-
 	"strings"
+	"time"
 
 	"github.com/gerbenjacobs/snaketrap/internal/core"
 	"github.com/gerbenjacobs/snaketrap/internal/webhook"
 	"github.com/inconshreveable/log15"
+	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
 type SheriffConfig struct {
