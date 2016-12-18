@@ -18,9 +18,7 @@ func createSheriff() *Sheriff {
 			"davecheney",
 		},
 	}
-	s.wrangler = &core.Wrangler{
-		DefaultRoom: "1234",
-	}
+	s.wrangler = &core.Wrangler{}
 	s.boot()
 	return s
 }

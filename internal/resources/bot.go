@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/emicklei/go-restful"
@@ -47,19 +46,6 @@ func (b BotResource) Comment() string {
 }
 
 func NewBotResource(wrangler *core.Wrangler) (*BotResource, error) {
-	// create Hipchat clients
-	c := hipchat.NewClient(wrangler.ScopeAuth)
-	b := hipchat.NewClient(wrangler.BotAuth)
-	pURL, err := url.Parse(wrangler.URL)
-	if err != nil {
-		return nil, err
-	}
-	c.BaseURL = pURL
-	b.BaseURL = pURL
-	wrangler.Client = c
-	wrangler.SetBotClient(b)
-
-	// Configure and return
 	botMap, err := CreateAndConfigureBots(wrangler)
 	if err != nil {
 		return nil, err
@@ -72,7 +58,7 @@ func NewBotResource(wrangler *core.Wrangler) (*BotResource, error) {
 
 func CreateAndConfigureBots(wrangler *core.Wrangler) (map[string]core.Bot, error) {
 	var botConfig map[string]BotConfig
-	if err := json.Unmarshal(wrangler.RawData["bots"], &botConfig); err != nil {
+	if err := json.Unmarshal(wrangler.GetBotConfig(), &botConfig); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal bot config: %v", err)
 	}
 
@@ -97,7 +83,6 @@ func CreateAndConfigureBots(wrangler *core.Wrangler) (map[string]core.Bot, error
 	return botMap, nil
 }
 
-// bind this resource to the container
 func (b BotResource) Bind(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
@@ -109,6 +94,7 @@ func (b BotResource) Bind(container *restful.Container) {
 
 	container.Add(ws)
 }
+
 func (b *BotResource) handleRequest(request *restful.Request, response *restful.Response) {
 	// process request
 	req := new(webhook.Request)
@@ -154,6 +140,7 @@ func (b *BotResource) handleRequest(request *restful.Request, response *restful.
 	}
 }
 
+// HelpMsg returns the default notification for the /bot --help command
 func (b BotResource) HelpMsg() hipchat.NotificationRequest {
 	bs := []string{}
 	for i := range b.bots {
@@ -170,6 +157,7 @@ func (b BotResource) HelpMsg() hipchat.NotificationRequest {
 	}
 }
 
+// FailedMsg returns the default notification for failed requests
 func (b BotResource) FailedMsg() hipchat.NotificationRequest {
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorRed,

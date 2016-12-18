@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net/url"
 	"os"
 
 	"github.com/gerbenjacobs/snaketrap/internal/webhook"
@@ -10,16 +11,22 @@ import (
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
-// Wrangler is the object that holds the configuration, HipChat client
-// and has several general methods
-type Wrangler struct {
+// HipchatConfig is the struct used to marshall the "hipchat" part
+// of the JSON configuration
+type HipchatConfig struct {
 	URL         string `json:"url"`
 	BotAuth     string `json:"bot_auth"`
 	ScopeAuth   string `json:"scope_auth"`
 	DefaultRoom string `json:"room_id"`
-	Client      *hipchat.Client
+}
+
+// Wrangler is the object that holds the configuration, HipChat client
+// and has several general methods
+type Wrangler struct {
+	defaultRoom string
+	scopeClient *hipchat.Client
 	botClient   *hipchat.Client
-	RawData     map[string]json.RawMessage
+	rawData     map[string]json.RawMessage
 }
 
 // Bot is the interface for the small bots used by the wrangler
@@ -32,45 +39,77 @@ type Bot interface {
 	CurrentState() []byte
 }
 
-func ReadConfig(addr *string, wrangler *Wrangler) error {
-	jsData, err := ioutil.ReadFile("config.json")
+// NewSnaketrap reads the config.json and returns a bootstrapped Wrangler and listen address.
+func NewSnaketrap(fileName string) (*Wrangler, string, error) {
+	addr := ""
+	jsData, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return err
+		return nil, addr, err
 	}
 
 	// get raw data
 	cfgMap := map[string]json.RawMessage{}
-	err = json.Unmarshal(jsData, &cfgMap)
-	if err != nil {
-		return err
-
+	if err = json.Unmarshal(jsData, &cfgMap); err != nil {
+		return nil, addr, err
 	}
 
 	// marshall the addr used in main
-	err = json.Unmarshal(cfgMap["addr"], &addr)
-	if err != nil {
-		return err
+	if err = json.Unmarshal(cfgMap["addr"], &addr); err != nil {
+		return nil, addr, err
 	}
 
 	// try to marshall the known properties
-	err = json.Unmarshal(cfgMap["hipchat"], &wrangler)
+	hcc := &HipchatConfig{}
+	if err = json.Unmarshal(cfgMap["hipchat"], hcc); err != nil {
+		return nil, addr, err
+	}
+
+	// bootstrap the wrangler object
+	wrangler := &Wrangler{}
+	if err = wrangler.bootstrap(hcc, cfgMap); err != nil {
+		return nil, "", err
+	}
+
+	return wrangler, addr, nil
+}
+
+func (w *Wrangler) bootstrap(hcc *HipchatConfig, cfgMap map[string]json.RawMessage) error {
+	// create HipChat clients
+	c := hipchat.NewClient(hcc.ScopeAuth)
+	b := hipchat.NewClient(hcc.BotAuth)
+	pURL, err := url.Parse(hcc.URL)
 	if err != nil {
 		return err
 	}
+	c.BaseURL = pURL
+	b.BaseURL = pURL
 
-	// add the rest of the raw data to the wrangler object
-	wrangler.RawData = cfgMap
+	// set up Wrangler
+	w.defaultRoom = hcc.DefaultRoom
+	w.scopeClient = c
+	w.botClient = b
+	w.rawData = cfgMap
 
 	return nil
 }
 
-func (w *Wrangler) SetBotClient(c *hipchat.Client) {
-	w.botClient = c
+func (w *Wrangler) GetBotConfig() json.RawMessage {
+	return w.rawData["bots"]
 }
 
 func (w *Wrangler) SendNotification(b Bot, n *hipchat.NotificationRequest) {
 	n.From = b.Name()
-	w.botClient.Room.Notification(w.DefaultRoom, n)
+	_, err := w.botClient.Room.Notification(w.defaultRoom, n)
+	if err != nil {
+		log15.Error("failed to send noticiation", "err", err, "bot", b.Name())
+	}
+}
+
+func (w *Wrangler) SetTopic(b Bot, topic string) {
+	_, err := w.scopeClient.Room.SetTopic(w.defaultRoom, topic)
+	if err != nil {
+		log15.Error("failed to set topic", "err", err, "bot", b.Name())
+	}
 }
 
 func (w *Wrangler) SetState(b Bot) error {

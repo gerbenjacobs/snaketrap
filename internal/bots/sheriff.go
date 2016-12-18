@@ -70,7 +70,7 @@ func (b *Sheriff) Help() hipchat.NotificationRequest {
 	%s - %s
 	<br>- /bot sheriff <strong>next</strong> - Switches to next sheriff
 	<br>- /bot sheriff <strong>previous</strong> - Switches to previous sheriff
-	<br>- /bot sheriff <strong>set</strong> &ser - Switches sheriff duties to $user
+	<br>- /bot sheriff <strong>set</strong> $user - Switches sheriff duties to $user
 	<br>- /bot sheriff <strong>away</strong> $user - Marks the $user as away
 	<br>- /bot sheriff <strong>back</strong> $user - Marks the $user as back
 	<br>- /bot sheriff <strong>list</strong> - Lists the sheriffs and their availability
@@ -209,10 +209,8 @@ func (b *Sheriff) rotateSheriff(next bool) {
 
 func (b *Sheriff) rotate(next bool) hipchat.NotificationRequest {
 	b.rotateSheriff(next)
-	b.changeSheriff()
-	go func() {
-		b.setState()
-	}()
+	go b.changeSheriff()
+	go b.setState()
 
 	var msg string
 	if next {
@@ -310,15 +308,8 @@ func (slice SheriffUsers) Swap(i, j int) {
 }
 
 func (b *Sheriff) changeSheriff() {
-	if b.wrangler.Client != nil {
-		go func() {
-			topic := fmt.Sprintf(b.config.Topic, b.sheriffName())
-			_, err := b.wrangler.Client.Room.SetTopic(b.wrangler.DefaultRoom, topic)
-			if err != nil {
-				log15.Error("failed to set topic", "err", err)
-			}
-		}()
-	}
+	topic := fmt.Sprintf(b.config.Topic, b.sheriffName())
+	b.wrangler.SetTopic(b, topic)
 }
 
 func (b *Sheriff) sheriffName() string {

@@ -13,9 +13,7 @@ import (
 
 func main() {
 	// [*] Configuration
-	var addr string
-	var wrangler core.Wrangler
-	err := core.ReadConfig(&addr, &wrangler)
+	wrangler, addr, err := core.NewSnaketrap("config.json")
 	if err != nil {
 		log15.Error("failed to read config", "err", err)
 		os.Exit(1)
@@ -36,7 +34,7 @@ func main() {
 	core.SetupSelfdiagnose(app)
 
 	// Create *your* resources and bind them
-	bot, err := resources.NewBotResource(&wrangler)
+	bot, err := resources.NewBotResource(wrangler)
 	if err != nil {
 		log15.Error("failed to create BotResource", "err", err)
 		os.Exit(1)
