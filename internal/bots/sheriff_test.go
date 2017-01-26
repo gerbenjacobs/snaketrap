@@ -34,9 +34,8 @@ func TestSheriffNext(t *testing.T) {
 	}
 
 	// trigger next and validate
-	s.rotateSheriff(true)
+	got = s.rotateSheriff(true)
 	want = 1 // "gerben"
-	got = s.current
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
 	}
@@ -53,9 +52,8 @@ func TestSheriffPreviousWrapAround(t *testing.T) {
 	}
 
 	// trigger next and validate
-	s.rotateSheriff(false)
+	got = s.rotateSheriff(false)
 	want = 2 // "robpike"
-	got = s.current
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
 	}
