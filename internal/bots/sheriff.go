@@ -16,6 +16,8 @@ import (
 type SheriffConfig struct {
 	Days         []int        `json:"days"`
 	Time         string       `json:"time"`
+	Announce     bool         `json:"announce"`
+	AnnounceTime string       `json:"announce_time"`
 	Topic        string       `json:"topic"`
 	Users        []string     `json:"users"`
 	SheriffUsers SheriffUsers `json:"-"`
@@ -42,6 +44,7 @@ type SheriffState struct {
 func (b *Sheriff) ticker() {
 	ticker := time.NewTicker(1 * time.Second)
 	fmtTime := fmt.Sprintf("%s:00", b.config.Time)
+	announceTime := fmt.Sprintf("%s:00", b.config.AnnounceTime)
 	go func() {
 		for {
 			select {
@@ -51,6 +54,12 @@ func (b *Sheriff) ticker() {
 					n := b.rotate(true)
 					b.wrangler.SendNotification(b, &n)
 					log15.Debug("switching to new sheriff", "sherrif", b.sheriffName(), "time", now)
+				}
+
+				if b.config.Announce && now.Format("15:04:05") == announceTime {
+					n, s := b.announceNextDaySheriff()
+					b.wrangler.SendNotification(b, &n)
+					log15.Debug("announcing sheriff for the next day", "sheriff", s, "time", now)
 				}
 			}
 		}
@@ -186,29 +195,33 @@ func (b *Sheriff) boot() {
 	sort.Sort(b.config.SheriffUsers)
 }
 
-func (b *Sheriff) rotateSheriff(next bool) {
+func (b *Sheriff) rotateSheriff(next bool) int {
+	rotatedSheriff := -1
 	if next {
-		b.current++
-		if b.current >= len(b.config.SheriffUsers) {
+		rotatedSheriff = b.current + 1
+		if rotatedSheriff >= len(b.config.SheriffUsers) {
 			// wrap around
-			b.current = 0
+			rotatedSheriff = 0
 		}
 	} else {
-		b.current--
-		if b.current < 0 {
-			b.current = len(b.config.SheriffUsers) - 1
+		rotatedSheriff = b.current - 1
+		if rotatedSheriff < 0 {
+			rotatedSheriff = len(b.config.SheriffUsers) - 1
 		}
 	}
 
-	if b.config.SheriffUsers[b.current].Status {
+	if b.config.SheriffUsers[rotatedSheriff].Status {
 		// sheriff is unavailable, rotate again
 		log15.Debug("skipping unavailable sheriff", "sherrif", b.sheriffName())
-		b.rotateSheriff(next)
+		return b.rotateSheriff(next)
 	}
+
+	return rotatedSheriff
 }
 
 func (b *Sheriff) rotate(next bool) hipchat.NotificationRequest {
-	b.rotateSheriff(next)
+	rotatedSheriff := b.rotateSheriff(next)
+	b.current = rotatedSheriff
 	go b.changeSheriff()
 	go b.setState()
 
@@ -280,6 +293,19 @@ func (b *Sheriff) unknown() hipchat.NotificationRequest {
 	}
 }
 
+func (b *Sheriff) announceNextDaySheriff() (n hipchat.NotificationRequest, s string) {
+	if b.isActiveDayTomorrow() {
+		rotatedSheriff := b.rotateSheriff(true)
+		s = b.sheriffNameById(rotatedSheriff)
+		return hipchat.NotificationRequest{
+			Color:   hipchat.ColorPurple,
+			Message: "Tomorrow's sheriff will be: " + s,
+		}, s
+	}
+
+	return n, s
+}
+
 func (b *Sheriff) list() hipchat.NotificationRequest {
 	n := []string{}
 	for _, u := range b.config.SheriffUsers {
@@ -316,6 +342,10 @@ func (b *Sheriff) sheriffName() string {
 	return b.config.SheriffUsers[b.current].Name
 }
 
+func (b *Sheriff) sheriffNameById(id int) string {
+	return b.config.SheriffUsers[id].Name
+}
+
 func (u SheriffUser) sheriffStatus() string {
 	if u.Status {
 		return "(failed)"
@@ -326,6 +356,15 @@ func (u SheriffUser) sheriffStatus() string {
 func (b *Sheriff) isActiveDay() bool {
 	for _, d := range b.config.Days {
 		if int(time.Now().Weekday()) == d {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *Sheriff) isActiveDayTomorrow() bool {
+	for _, d := range b.config.Days {
+		if int(time.Now().AddDate(0, 0, 1).Weekday()) == d {
 			return true
 		}
 	}

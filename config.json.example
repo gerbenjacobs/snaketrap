@@ -12,6 +12,8 @@
       "data": {
         "days": [1,2,3,4,5],
         "time": "09:00",
+        "announce": true,
+        "announce_time": "17:00",
         "topic": "Current sheriff: %s - MOTD here..",
         "users": []
       }
