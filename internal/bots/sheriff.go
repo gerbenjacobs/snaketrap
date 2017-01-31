@@ -51,7 +51,7 @@ func (b *Sheriff) ticker() {
 			select {
 			case <-ticker.C:
 				now := time.Now()
-				if b.isActiveDay() && now.Format("15:04:05") == fmtTime {
+				if b.isActiveDay(now) && now.Format("15:04:05") == fmtTime {
 					n := b.rotate(true)
 					b.wrangler.SendNotification(b, &n)
 					log15.Debug("switching to new sheriff", "sherrif", b.sheriffName(), "time", now)
@@ -295,22 +295,16 @@ func (b *Sheriff) unknown() hipchat.NotificationRequest {
 }
 
 func (b *Sheriff) sendAnnouncement() {
-	n, s := b.announceNextDaySheriff()
-	b.wrangler.SendNotification(b, &n)
-	log15.Debug("announcing sheriff for the next day", "sheriff", s, "time", time.Now())
-}
-
-func (b *Sheriff) announceNextDaySheriff() (n hipchat.NotificationRequest, s string) {
-	if b.isActiveDayTomorrow() {
+	if b.isActiveDayTomorrow(time.Now()) {
 		rotatedSheriff := b.nextSheriff(true, b.current)
-		s = b.sheriffNameById(rotatedSheriff)
-		return hipchat.NotificationRequest{
+		s := b.sheriffNameById(rotatedSheriff)
+		n := hipchat.NotificationRequest{
 			Color:   hipchat.ColorPurple,
 			Message: "Tomorrow's sheriff will be: " + s,
-		}, s
+		}
+		b.wrangler.SendNotification(b, &n)
+		log15.Debug("announcing sheriff for the next day", "sheriff", s, "time", time.Now())
 	}
-
-	return n, s
 }
 
 func (b *Sheriff) list() hipchat.NotificationRequest {
@@ -360,22 +354,17 @@ func (u SheriffUser) sheriffStatus() string {
 	return "(successful)"
 }
 
-func (b *Sheriff) isActiveDay() bool {
+func (b *Sheriff) isActiveDay(now time.Time) bool {
 	for _, d := range b.config.Days {
-		if int(time.Now().Weekday()) == d {
+		if int(now.Weekday()) == d {
 			return true
 		}
 	}
 	return false
 }
 
-func (b *Sheriff) isActiveDayTomorrow() bool {
-	for _, d := range b.config.Days {
-		if int(time.Now().AddDate(0, 0, 1).Weekday()) == d {
-			return true
-		}
-	}
-	return false
+func (b *Sheriff) isActiveDayTomorrow(now time.Time) bool {
+	return b.isActiveDay(now.AddDate(0, 0, 1))
 }
 
 func (b *Sheriff) setState() {

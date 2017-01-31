@@ -3,6 +3,8 @@ package bots
 import (
 	"testing"
 
+	"time"
+
 	"github.com/gerbenjacobs/snaketrap/internal/core"
 )
 
@@ -58,5 +60,58 @@ func TestSheriffNextSkipsUnavailable(t *testing.T) {
 	want := 2 // "jessfraz"
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
+	}
+}
+
+func TestIsActiveDay(t *testing.T) {
+	s := createSheriff()
+
+	loc, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Errorf("failed to load timezone UTC: %s", err)
+	}
+
+	for _, each := range []struct {
+		name   string
+		day    time.Time
+		active bool
+	}{
+		{"mon", time.Date(2017, 01, 30, 12, 0, 0, 0, loc), true},
+		{"tue", time.Date(2017, 01, 31, 12, 0, 0, 0, loc), true},
+		{"wed", time.Date(2017, 02, 1, 12, 0, 0, 0, loc), true},
+		{"thu", time.Date(2017, 02, 2, 12, 0, 0, 0, loc), true},
+		{"fri", time.Date(2017, 02, 3, 12, 0, 0, 0, loc), true},
+		{"sat", time.Date(2017, 02, 4, 12, 0, 0, 0, loc), false},
+		{"sun", time.Date(2017, 02, 5, 12, 0, 0, 0, loc), false},
+	} {
+		got := s.isActiveDay(each.day)
+		if got != each.active {
+			t.Errorf("[%v] isActiveDay returned %t, want %t", each.name, got, each.active)
+		}
+	}
+}
+
+func TestIsActiveDayTomorrow(t *testing.T) {
+	s := createSheriff()
+
+	loc, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Errorf("failed to load timezone UTC: %s", err)
+	}
+
+	for _, each := range []struct {
+		name   string
+		day    time.Time
+		active bool
+	}{
+		{"fri", time.Date(2017, 02, 3, 12, 0, 0, 0, loc), false},
+		{"sat", time.Date(2017, 02, 4, 12, 0, 0, 0, loc), false},
+		{"sun", time.Date(2017, 02, 5, 12, 0, 0, 0, loc), true},
+		{"mon", time.Date(2017, 01, 30, 12, 0, 0, 0, loc), true},
+	} {
+		got := s.isActiveDayTomorrow(each.day)
+		if got != each.active {
+			t.Errorf("[%v] isActiveDay returned %t, want %t", each.name, got, each.active)
+		}
 	}
 }
