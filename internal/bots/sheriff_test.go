@@ -12,10 +12,12 @@ func createSheriff() *Sheriff {
 		Days:  []int{1, 2, 3, 4, 5},
 		Time:  "12:00",
 		Topic: "Current sheriff: %s - Some MOTD here..",
-		Users: []string{
-			"gerben",
-			"robpike",
-			"davecheney",
+		// SherrifUsers will be alphabetically sorted.
+		SheriffUsers: SheriffUsers{
+			{Name: "gerben", Away: true},
+			{Name: "robpike", Away: false},
+			{Name: "davecheney", Away: false},
+			{Name: "jessfraz", Away: false},
 		},
 	}
 	s.wrangler = &core.Wrangler{}
@@ -25,17 +27,11 @@ func createSheriff() *Sheriff {
 
 func TestSheriffNext(t *testing.T) {
 	s := createSheriff()
-
-	// validate current sheriff
-	want := 0 // "davecheney"
-	got := s.current
-	if got != want {
-		t.Errorf("wrong sheriff. Got: %d Want: %d", got, want)
-	}
+	s.current = 1 // set sheriff to "gerben"
 
 	// trigger next and validate
-	got = s.rotateSheriff(true)
-	want = 1 // "gerben"
+	got := s.nextSheriff(true, s.current)
+	want := 2 // "jessfraz"
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
 	}
@@ -43,17 +39,23 @@ func TestSheriffNext(t *testing.T) {
 
 func TestSheriffPreviousWrapAround(t *testing.T) {
 	s := createSheriff()
+	s.current = 0 // set sheriff to "davecheney"
 
-	// validate current sheriff
-	want := 0 // "davecheney"
-	got := s.current
+	// trigger previous and validate wrapround
+	got := s.nextSheriff(false, s.current)
+	want := 3 // "robpike"
 	if got != want {
-		t.Errorf("wrong sheriff. Got: %d Want: %d", got, want)
+		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
 	}
+}
 
-	// trigger next and validate
-	got = s.rotateSheriff(false)
-	want = 2 // "robpike"
+func TestSheriffNextSkipsUnavailable(t *testing.T) {
+	s := createSheriff()
+	s.current = 0 // set sheriff to "davecheney"
+
+	// trigger next and validate that 1:"gerben" is skipped because of away status
+	got := s.nextSheriff(true, s.current)
+	want := 2 // "jessfraz"
 	if got != want {
 		t.Errorf("wrong next sheriff. Got: %d Want: %d", got, want)
 	}

@@ -2,6 +2,7 @@ package bots
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -32,8 +33,8 @@ type Sheriff struct {
 type SheriffUsers []SheriffUser
 
 type SheriffUser struct {
-	Name   string `json:"name"`
-	Status bool   `json:"away"`
+	Name string `json:"name"`
+	Away bool   `json:"away"`
 }
 
 type SheriffState struct {
@@ -57,9 +58,7 @@ func (b *Sheriff) ticker() {
 				}
 
 				if b.config.Announce && now.Format("15:04:05") == announceTime {
-					n, s := b.announceNextDaySheriff()
-					b.wrangler.SendNotification(b, &n)
-					log15.Debug("announcing sheriff for the next day", "sheriff", s, "time", now)
+					go b.sendAnnouncement()
 				}
 			}
 		}
@@ -83,6 +82,7 @@ func (b *Sheriff) Help() hipchat.NotificationRequest {
 	<br>- /bot sheriff <strong>away</strong> $user - Marks the $user as away
 	<br>- /bot sheriff <strong>back</strong> $user - Marks the $user as back
 	<br>- /bot sheriff <strong>list</strong> - Lists the sheriffs and their availability
+	<br>- /bot sheriff <strong>announce</strong> - Announces the sheriff for the next day
 	`
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
@@ -120,6 +120,9 @@ func (b *Sheriff) HandleMessage(req *webhook.Request) (hipchat.NotificationReque
 		return b.status(req, false), true
 	case "list":
 		return b.list(), true
+	case "announce":
+		go b.sendAnnouncement()
+		return hipchat.NotificationRequest{}, false
 	case "test":
 		go func() {
 			n := hipchat.NotificationRequest{
@@ -145,7 +148,7 @@ func (b *Sheriff) HandleConfig(w *core.Wrangler, data json.RawMessage) error {
 
 	// do we have sheriffs?
 	if len(cfg.Users) == 0 {
-		return fmt.Errorf("you have not supplied sheriffs in the 'users' field")
+		return errors.New("you have not supplied sheriffs in the 'users' field")
 	}
 
 	// add config and boot
@@ -186,8 +189,8 @@ func (b *Sheriff) boot() {
 	// create SheriffUsers
 	for _, u := range b.config.Users {
 		b.config.SheriffUsers = append(b.config.SheriffUsers, SheriffUser{
-			Name:   u,
-			Status: false,
+			Name: u,
+			Away: false,
 		})
 	}
 
@@ -195,33 +198,31 @@ func (b *Sheriff) boot() {
 	sort.Sort(b.config.SheriffUsers)
 }
 
-func (b *Sheriff) rotateSheriff(next bool) int {
-	rotatedSheriff := -1
+func (b *Sheriff) nextSheriff(next bool, current int) int {
 	if next {
-		rotatedSheriff = b.current + 1
-		if rotatedSheriff >= len(b.config.SheriffUsers) {
+		current++
+		if current >= len(b.config.SheriffUsers) {
 			// wrap around
-			rotatedSheriff = 0
+			current = 0
 		}
 	} else {
-		rotatedSheriff = b.current - 1
-		if rotatedSheriff < 0 {
-			rotatedSheriff = len(b.config.SheriffUsers) - 1
+		current--
+		if current < 0 {
+			current = len(b.config.SheriffUsers) - 1
 		}
 	}
 
-	if b.config.SheriffUsers[rotatedSheriff].Status {
+	if b.config.SheriffUsers[current].Away {
 		// sheriff is unavailable, rotate again
-		log15.Debug("skipping unavailable sheriff", "sherrif", b.sheriffName())
-		return b.rotateSheriff(next)
+		log15.Debug("skipping unavailable sheriff", "sherrif", b.sheriffNameById(current))
+		return b.nextSheriff(next, current)
 	}
 
-	return rotatedSheriff
+	return current
 }
 
 func (b *Sheriff) rotate(next bool) hipchat.NotificationRequest {
-	rotatedSheriff := b.rotateSheriff(next)
-	b.current = rotatedSheriff
+	b.current = b.nextSheriff(next, b.current)
 	go b.changeSheriff()
 	go b.setState()
 
@@ -251,7 +252,7 @@ func (b *Sheriff) status(req *webhook.Request, away bool) hipchat.NotificationRe
 	for i, u := range b.config.SheriffUsers {
 		if u.Name == user {
 			found = true
-			b.config.SheriffUsers[i].Status = away
+			b.config.SheriffUsers[i].Away = away
 		}
 	}
 
@@ -293,9 +294,15 @@ func (b *Sheriff) unknown() hipchat.NotificationRequest {
 	}
 }
 
+func (b *Sheriff) sendAnnouncement() {
+	n, s := b.announceNextDaySheriff()
+	b.wrangler.SendNotification(b, &n)
+	log15.Debug("announcing sheriff for the next day", "sheriff", s, "time", time.Now())
+}
+
 func (b *Sheriff) announceNextDaySheriff() (n hipchat.NotificationRequest, s string) {
 	if b.isActiveDayTomorrow() {
-		rotatedSheriff := b.rotateSheriff(true)
+		rotatedSheriff := b.nextSheriff(true, b.current)
 		s = b.sheriffNameById(rotatedSheriff)
 		return hipchat.NotificationRequest{
 			Color:   hipchat.ColorPurple,
@@ -347,7 +354,7 @@ func (b *Sheriff) sheriffNameById(id int) string {
 }
 
 func (u SheriffUser) sheriffStatus() string {
-	if u.Status {
+	if u.Away {
 		return "(failed)"
 	}
 	return "(successful)"
@@ -402,12 +409,12 @@ func (b *Sheriff) initializeState() error {
 func (b *Sheriff) mergeSheriffUsers(state SheriffUsers) {
 	status := map[string]bool{}
 	for _, stateSheriff := range state {
-		status[stateSheriff.Name] = stateSheriff.Status
+		status[stateSheriff.Name] = stateSheriff.Away
 	}
 
 	for i, configSheriff := range b.config.SheriffUsers {
 		if availability, ok := status[configSheriff.Name]; ok {
-			b.config.SheriffUsers[i].Status = availability
+			b.config.SheriffUsers[i].Away = availability
 		}
 	}
 }
