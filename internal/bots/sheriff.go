@@ -14,6 +14,22 @@ import (
 	"github.com/tbruyelle/hipchat-go/hipchat"
 )
 
+const (
+	EmojiUnauthorized = "(foreveralone)"
+	EmojiFailed       = "(failed)"
+	EmojiSuccess      = "(successful)"
+
+	CmdNext     = "next"
+	CmdPrevious = "previous"
+	CmdSet      = "set"
+	CmdAway     = "away"
+	CmdBack     = "back"
+	CmdList     = "list"
+	CmdAnnounce = "announce"
+)
+
+var AuthorizedCmds = []string{CmdNext, CmdPrevious, CmdSet, CmdAway, CmdBack}
+
 type SheriffConfig struct {
 	Days         []int        `json:"days"`
 	Time         string       `json:"time"`
@@ -44,14 +60,14 @@ type SheriffState struct {
 
 func (b *Sheriff) ticker() {
 	ticker := time.NewTicker(1 * time.Second)
-	fmtTime := fmt.Sprintf("%s:00", b.config.Time)
+	rotateTime := fmt.Sprintf("%s:00", b.config.Time)
 	announceTime := fmt.Sprintf("%s:00", b.config.AnnounceTime)
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
 				now := time.Now()
-				if b.isActiveDay(now) && now.Format("15:04:05") == fmtTime {
+				if b.isActiveDay(now) && now.Format("15:04:05") == rotateTime {
 					n := b.rotate(true)
 					b.wrangler.SendNotification(b, &n)
 					log15.Debug("switching to new sheriff", "sherrif", b.sheriffName(), "time", now)
@@ -74,19 +90,24 @@ func (b *Sheriff) Description() string {
 }
 
 func (b *Sheriff) Help() hipchat.NotificationRequest {
-	help := `
-	%s - %s
-	<br>- /bot sheriff <strong>next</strong> - Switches to next sheriff
-	<br>- /bot sheriff <strong>previous</strong> - Switches to previous sheriff
-	<br>- /bot sheriff <strong>set</strong> $user - Switches sheriff duties to $user
-	<br>- /bot sheriff <strong>away</strong> $user - Marks the $user as away
-	<br>- /bot sheriff <strong>back</strong> $user - Marks the $user as back
-	<br>- /bot sheriff <strong>list</strong> - Lists the sheriffs and their availability
-	<br>- /bot sheriff <strong>announce</strong> - Announces the sheriff for the next day
-	`
+	help := fmt.Sprintf(`
+	<strong>%s</strong> - %s
+	<br>- /bot sheriff <strong>%s</strong> - * Switches to next sheriff
+	<br>- /bot sheriff <strong>%s</strong> - * Switches to previous sheriff
+	<br>- /bot sheriff <strong>%s</strong> $user - * Switches sheriff duties to $user
+	<br>- /bot sheriff <strong>%s</strong> $user - * Marks the $user as away
+	<br>- /bot sheriff <strong>%s</strong> $user - * Marks the $user as back
+	<br>- /bot sheriff <strong>%s</strong> - Lists the sheriffs and their availability
+	<br>- /bot sheriff <strong>%s</strong> - Announces the sheriff for the next day
+	<br><br><em>* admin only</em>
+	`,
+		b.Name(), b.Description(),
+		CmdNext, CmdPrevious, CmdSet, CmdAway, CmdBack, CmdList, CmdAnnounce,
+	)
+
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
-		Message:       fmt.Sprintf(help, b.Name(), b.Description()),
+		Message:       help,
 		Notify:        false,
 		MessageFormat: "html",
 	}
@@ -104,30 +125,39 @@ func (b *Sheriff) extractAction(cmd string) string {
 
 func (b *Sheriff) HandleMessage(req *webhook.Request) (hipchat.NotificationRequest, bool) {
 	action := b.extractAction(req.Message())
+	requester := req.Username()
+
+	// enforce authorization
+	for _, a := range AuthorizedCmds {
+		if a == action && !b.isAuthorized(requester) {
+			return b.unauthorized(), true
+		}
+	}
+
 	switch action {
-	case "next":
+	case CmdNext:
 		return b.rotate(true), true
-	case "previous":
+	case CmdPrevious:
 		return b.rotate(false), true
-	case "set":
+	case CmdSet:
 		return hipchat.NotificationRequest{
 			Color:   hipchat.ColorYellow,
 			Message: "This method is not implemented yet..",
 		}, true
-	case "away":
+	case CmdAway:
 		return b.status(req, true), true
-	case "back":
+	case CmdBack:
 		return b.status(req, false), true
-	case "list":
+	case CmdList:
 		return b.list(), true
-	case "announce":
+	case CmdAnnounce:
 		go b.sendAnnouncement()
 		return hipchat.NotificationRequest{}, false
 	case "test":
 		go func() {
 			n := hipchat.NotificationRequest{
 				Color:         hipchat.ColorPurple,
-				Message:       "We are sending a test notification! Thanks, " + req.Username(),
+				Message:       "We are sending a test notification! Thanks, " + requester,
 				Notify:        false,
 				MessageFormat: "text",
 			}
@@ -279,7 +309,7 @@ func (b *Sheriff) status(req *webhook.Request, away bool) hipchat.NotificationRe
 	}
 	return hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
-		Message:       fmt.Sprintf("Marking user %s as %s. %s", user, status, msg),
+		Message:       fmt.Sprintf("Marking user %s as %s. %s", req.Fullname(), status, msg),
 		Notify:        false,
 		MessageFormat: "text",
 	}
@@ -294,6 +324,15 @@ func (b *Sheriff) unknown() hipchat.NotificationRequest {
 	}
 }
 
+func (b *Sheriff) unauthorized() hipchat.NotificationRequest {
+	return hipchat.NotificationRequest{
+		Color:         hipchat.ColorRed,
+		Message:       "I'm sorry partner, but you don't seem to be holding a shiny gold sheriff's badge! " + EmojiUnauthorized,
+		Notify:        false,
+		MessageFormat: "text",
+	}
+}
+
 func (b *Sheriff) sendAnnouncement() {
 	if b.isActiveDayTomorrow(time.Now()) {
 		rotatedSheriff := b.nextSheriff(true, b.current)
@@ -304,6 +343,13 @@ func (b *Sheriff) sendAnnouncement() {
 		}
 		b.wrangler.SendNotification(b, &n)
 		log15.Debug("announcing sheriff for the next day", "sheriff", s, "time", time.Now())
+	} else {
+		n := hipchat.NotificationRequest{
+			Color:   hipchat.ColorPurple,
+			Message: "There is no sheriff's duty tomorrow..",
+		}
+		b.wrangler.SendNotification(b, &n)
+		log15.Debug("no sheriff duty tomorrow..")
 	}
 }
 
@@ -349,9 +395,9 @@ func (b *Sheriff) sheriffNameById(id int) string {
 
 func (u SheriffUser) sheriffStatus() string {
 	if u.Away {
-		return "(failed)"
+		return EmojiFailed
 	}
-	return "(successful)"
+	return EmojiSuccess
 }
 
 func (b *Sheriff) isActiveDay(now time.Time) bool {
@@ -406,4 +452,14 @@ func (b *Sheriff) mergeSheriffUsers(state SheriffUsers) {
 			b.config.SheriffUsers[i].Away = availability
 		}
 	}
+}
+
+func (b *Sheriff) isAuthorized(sheriff string) bool {
+	for _, s := range b.config.SheriffUsers {
+		if s.Name == sheriff {
+			return true
+		}
+	}
+
+	return false
 }

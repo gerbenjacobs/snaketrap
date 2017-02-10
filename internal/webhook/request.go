@@ -41,6 +41,10 @@ func (r Request) Username() string {
 	return r.Item.Message.From.MentionName
 }
 
+func (r Request) Fullname() string {
+	return r.Item.Message.From.Name
+}
+
 func (r Request) GetWord(n int) string {
 	w := strings.Fields(r.Message())
 	if n >= len(w) {
