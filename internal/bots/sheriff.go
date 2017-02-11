@@ -73,7 +73,7 @@ func (b *Sheriff) ticker() {
 					log15.Debug("switching to new sheriff", "sherrif", b.sheriffName(), "time", now)
 				}
 
-				if b.config.Announce && now.Format("15:04:05") == announceTime {
+				if b.config.Announce && b.isActiveDayTomorrow(now) && now.Format("15:04:05") == announceTime {
 					go b.sendAnnouncement()
 				}
 			}
@@ -89,7 +89,7 @@ func (b *Sheriff) Description() string {
 	return fmt.Sprintf("A bot that rotates users daily for the engineer on duty role a.k.a. sheriff. Current sheriff: %s Refresh time: %s", b.sheriffName(), b.config.Time)
 }
 
-func (b *Sheriff) Help() hipchat.NotificationRequest {
+func (b *Sheriff) Help() core.Reply {
 	help := fmt.Sprintf(`
 	<strong>%s</strong> - %s
 	<br>- /bot sheriff <strong>%s</strong> - * Switches to next sheriff
@@ -105,12 +105,14 @@ func (b *Sheriff) Help() hipchat.NotificationRequest {
 		CmdNext, CmdPrevious, CmdSet, CmdAway, CmdBack, CmdList, CmdAnnounce,
 	)
 
-	return hipchat.NotificationRequest{
+	n := hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
 		Message:       help,
 		Notify:        false,
 		MessageFormat: "html",
 	}
+
+	return core.NewReply(n)
 }
 
 func (b *Sheriff) extractAction(cmd string) string {
@@ -123,36 +125,38 @@ func (b *Sheriff) extractAction(cmd string) string {
 	return ""
 }
 
-func (b *Sheriff) HandleMessage(req *webhook.Request) (hipchat.NotificationRequest, bool) {
+func (b *Sheriff) HandleMessage(req *webhook.Request) core.Reply {
 	action := b.extractAction(req.Message())
 	requester := req.Username()
 
 	// enforce authorization
 	for _, a := range AuthorizedCmds {
 		if a == action && !b.isAuthorized(requester) {
-			return b.unauthorized(), true
+			return core.NewReply(b.unauthorized())
 		}
 	}
 
 	switch action {
 	case CmdNext:
-		return b.rotate(true), true
+		return core.NewReply(b.rotate(true))
 	case CmdPrevious:
-		return b.rotate(false), true
+		return core.NewReply(b.rotate(false))
+
 	case CmdSet:
-		return hipchat.NotificationRequest{
+		n := hipchat.NotificationRequest{
 			Color:   hipchat.ColorYellow,
 			Message: "This method is not implemented yet..",
-		}, true
+		}
+		return core.NewReply(n)
 	case CmdAway:
-		return b.status(req, true), true
+		return core.NewReply(b.status(req, true))
 	case CmdBack:
-		return b.status(req, false), true
+		return core.NewReply(b.status(req, false))
 	case CmdList:
-		return b.list(), true
+		return core.NewReply(b.list())
 	case CmdAnnounce:
 		go b.sendAnnouncement()
-		return hipchat.NotificationRequest{}, false
+		return core.NoOpReply()
 	case "test":
 		go func() {
 			n := hipchat.NotificationRequest{
@@ -163,9 +167,9 @@ func (b *Sheriff) HandleMessage(req *webhook.Request) (hipchat.NotificationReque
 			}
 			b.wrangler.SendNotification(b, &n)
 		}()
-		return hipchat.NotificationRequest{}, false
+		return core.NoOpReply()
 	default:
-		return b.unknown(), true
+		return core.NewReply(b.unknown())
 	}
 }
 

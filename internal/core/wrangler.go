@@ -33,10 +33,23 @@ type Wrangler struct {
 type Bot interface {
 	Name() string
 	Description() string
-	Help() hipchat.NotificationRequest
-	HandleMessage(*webhook.Request) (hipchat.NotificationRequest, bool)
+	Help() Reply
+	HandleMessage(*webhook.Request) Reply
 	HandleConfig(*Wrangler, json.RawMessage) error
 	CurrentState() []byte
+}
+
+type Reply struct {
+	Notification hipchat.NotificationRequest
+	Replying bool
+}
+
+func NewReply(n hipchat.NotificationRequest) Reply {
+	return Reply{Notification: n, Replying: true}
+}
+
+func NoOpReply() Reply {
+	return Reply{Notification: hipchat.NotificationRequest{}, Replying: false}
 }
 
 // NewSnaketrap reads the config.json and returns a bootstrapped Wrangler and listen address.

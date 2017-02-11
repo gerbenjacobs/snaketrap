@@ -21,27 +21,30 @@ func (b Version) Description() string {
 	return "Can look up a version across environments"
 }
 
-func (b Version) Help() hipchat.NotificationRequest {
+func (b Version) Help() core.Reply {
 	help := `
 	%s - %s
 	<br>- /bot version $app - Returns information about $app on all environments
 	`
-	return hipchat.NotificationRequest{
+	n := hipchat.NotificationRequest{
 		Color:         hipchat.ColorYellow,
 		Message:       fmt.Sprintf(help, b.Name(), b.Description()),
 		Notify:        false,
 		MessageFormat: "html",
 	}
+	return core.NewReply(n)
 }
 
-func (b Version) HandleMessage(req *webhook.Request) (hipchat.NotificationRequest, bool) {
+func (b Version) HandleMessage(req *webhook.Request) core.Reply {
 	app := req.Message()
-	return hipchat.NotificationRequest{
+	n := hipchat.NotificationRequest{
 		Color:         hipchat.ColorGray,
 		Message:       fmt.Sprintf("Versions for %s: [tst] 1025.255 [acc] 3636 [xpr] 335 [pro] 3636", app),
 		Notify:        false,
 		MessageFormat: "text",
-	}, true
+	}
+
+	return core.NewReply(n)
 }
 
 func (b Version) HandleConfig(wrangler *core.Wrangler, data json.RawMessage) error {
