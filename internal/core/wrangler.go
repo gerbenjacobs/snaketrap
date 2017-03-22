@@ -114,7 +114,7 @@ func (w *Wrangler) SendNotification(b Bot, n *hipchat.NotificationRequest) {
 	n.From = b.Name()
 	_, err := w.botClient.Room.Notification(w.defaultRoom, n)
 	if err != nil {
-		log15.Error("failed to send noticiation", "err", err, "bot", b.Name())
+		log15.Error("failed to send notification", "err", err, "bot", b.Name())
 	}
 }
 
@@ -134,20 +134,24 @@ func (w *Wrangler) GetState(b Bot) ([]byte, error) {
 	data, err := ioutil.ReadFile(f)
 	if _, ok := err.(*os.PathError); ok {
 		// no file, initialize
-		return w.initializeState(b, f)
+		if err := w.initializeState(b, f); err != nil {
+			log15.Error("failed to write initial state", "err", err)
+			return data, err
+		}
+		// created, call myself again
+		return w.GetState(b)
 	}
 	return data, err
 }
 
-func (w *Wrangler) initializeState(b Bot, f string) ([]byte, error) {
+func (w *Wrangler) initializeState(b Bot, filename string) error {
 	if err := os.MkdirAll(StateFileFolder, os.ModePerm); err != nil {
-		return nil, err
+		return err
 	}
 	if err := w.SetState(b); err != nil {
-		log15.Warn("failed to create initial state file", "err", err, "bot", b.Name(), "filename", f)
-		return nil, err
+		log15.Warn("failed to create initial state file", "err", err, "bot", b.Name(), "filename", filename)
+		return err
 	}
 
-	// created, call myself again
-	return w.GetState(b)
+	return nil
 }
