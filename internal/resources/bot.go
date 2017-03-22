@@ -23,7 +23,7 @@ type BotConfig struct {
 
 var BotLookup = map[string]core.Bot{
 	"sheriff": &bots.Sheriff{},
-	"version": &bots.Version{},
+	"8ball":   &bots.EightBall{},
 }
 
 type BotResource struct {

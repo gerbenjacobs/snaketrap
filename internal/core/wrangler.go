@@ -41,7 +41,7 @@ type Bot interface {
 
 type Reply struct {
 	Notification hipchat.NotificationRequest
-	Replying bool
+	Replying     bool
 }
 
 func NewReply(n hipchat.NotificationRequest) Reply {
