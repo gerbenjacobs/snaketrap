@@ -40,6 +40,15 @@ func (b *EightBall) Help() core.Reply {
 func (b *EightBall) HandleMessage(req *webhook.Request) core.Reply {
 	question := req.Message()
 
+	if question == "" {
+		return core.NewReply(hipchat.NotificationRequest{
+			Color:         hipchat.ColorYellow,
+			Message:       "You didn't ask a question, I can not help you, sorry. (bunny)",
+			Notify:        false,
+			MessageFormat: "text",
+		})
+	}
+
 	go b.reply()
 
 	return core.NewReply(hipchat.NotificationRequest{

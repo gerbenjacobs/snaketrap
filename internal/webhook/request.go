@@ -34,7 +34,8 @@ type From struct {
 }
 
 func (r Request) Message() string {
-	return r.Item.Message.Message
+	a := strings.Fields(r.Item.Message.Message)
+	return strings.Join(a[2:], " ")
 }
 
 func (r Request) Username() string {
@@ -45,8 +46,8 @@ func (r Request) Fullname() string {
 	return r.Item.Message.From.Name
 }
 
-func (r Request) GetWord(n int) string {
-	w := strings.Fields(r.Message())
+func (r Request) GetToken(n int) string {
+	w := strings.Fields(r.Item.Message.Message)
 	if n >= len(w) {
 		return ""
 	}
@@ -54,5 +55,5 @@ func (r Request) GetWord(n int) string {
 }
 
 func (r Request) Bot() string {
-	return r.GetWord(1)
+	return r.GetToken(1)
 }

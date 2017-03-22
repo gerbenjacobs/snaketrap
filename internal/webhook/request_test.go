@@ -22,7 +22,7 @@ var jsData = `
 			},
 			"id": "b4fb28bd-617b-4661-a1cd-ecefb83680f0",
 			"mentions": [],
-			"message": "/bot my message here",
+			"message": "/bot sheriff my message here",
 			"type": "message"
 		},
 		"room": {
@@ -47,6 +47,26 @@ func TestMarshalling(t *testing.T) {
 	err := json.Unmarshal([]byte(jsData), req)
 
 	if err != nil {
-		t.Error("Failed to unmarshal hipchat.Request", "err", err)
+		t.Errorf("failed to unmarshal hipchat.Request: %v", err)
+	}
+
+	if req.Username() != "gerben" {
+		t.Errorf("request contains wrong username: %v", req.Username())
+	}
+
+	if req.Fullname() != "Gerben Jacobs" {
+		t.Errorf("request contains wrong full name: %v", req.Fullname())
+	}
+
+	if req.Bot() != "sheriff" {
+		t.Errorf("request contains wrong bot: %v", req.Bot())
+	}
+
+	if req.GetToken(3) != "message" {
+		t.Errorf("request contains wrong 3rd word: %v", req.GetToken(3))
+	}
+
+	if req.Message() != "my message here" {
+		t.Errorf("request contains wrong message: %v", req.Message())
 	}
 }

@@ -276,7 +276,7 @@ func (b *Sheriff) rotate(next bool) hipchat.NotificationRequest {
 }
 
 func (b *Sheriff) status(req *webhook.Request, away bool) hipchat.NotificationRequest {
-	user := req.GetWord(3)
+	user := req.GetToken(3)
 	if user == "" {
 		user = req.Username()
 	}
