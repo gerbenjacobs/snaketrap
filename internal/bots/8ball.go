@@ -64,6 +64,7 @@ func (b *EightBall) reply() {
 
 	rand.Seed(time.Now().Unix())
 	answers := []string{
+		// yes 0 - 9
 		"It is certain",
 		"It is decidedly so",
 		"Without a doubt",
@@ -74,11 +75,13 @@ func (b *EightBall) reply() {
 		"Outlook good",
 		"Yes",
 		"Signs point to yes",
+		// maybe 10 - 14
 		"Reply hazy try again",
 		"Ask again later",
 		"Better not tell you now",
 		"Cannot predict now",
 		"Concentrate and ask again",
+		// no 15 - 19
 		"Don't count on it",
 		"My reply is no",
 		"My sources say no",
@@ -86,9 +89,21 @@ func (b *EightBall) reply() {
 		"Very doubtful",
 	}
 
+	var color hipchat.Color
+	r := rand.Intn(len(answers))
+	switch {
+	case r < 10:
+		color = hipchat.ColorGreen
+	case r < 15:
+		color = hipchat.ColorYellow
+	case r < 20:
+		color = hipchat.ColorRed
+	default:
+		color = hipchat.ColorPurple
+	}
 	n := hipchat.NotificationRequest{
-		Color:         hipchat.ColorPurple,
-		Message:       fmt.Sprintf(".. my answer is: %s", answers[rand.Intn(len(answers))]),
+		Color:         color,
+		Message:       answers[r],
 		Notify:        false,
 		MessageFormat: "text",
 	}
