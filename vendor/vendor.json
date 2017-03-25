@@ -13,9 +13,10 @@
 			"revisionTime": "2016-09-19T11:52:21+02:00"
 		},
 		{
+			"checksumSHA1": "CxeSjfVXFpNntsLCH5F9RG65HQc=",
 			"path": "github.com/emicklei/go-selfdiagnose",
-			"revision": "3bd9c630af8d1c8452dab624f8a5d4c91a7fb2cb",
-			"revisionTime": "2016-08-29T16:40:28+02:00"
+			"revision": "73fa93786b7b5d9912bc0b443a02d992358b9363",
+			"revisionTime": "2017-02-10T09:34:40Z"
 		},
 		{
 			"path": "github.com/go-stack/stack",
