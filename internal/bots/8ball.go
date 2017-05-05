@@ -21,7 +21,7 @@ func (b *EightBall) Name() string {
 }
 
 func (b *EightBall) Description() string {
-	return "C"
+	return "A magic 8ball - you can ask it a question and it will answer with yes, no or maybe."
 }
 
 func (b *EightBall) Help() core.Reply {

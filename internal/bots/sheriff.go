@@ -115,18 +115,8 @@ func (b *Sheriff) Help() core.Reply {
 	return core.NewReply(n)
 }
 
-func (b *Sheriff) extractAction(cmd string) string {
-	w := strings.Fields(cmd)
-
-	if len(w) >= 3 {
-		return w[2]
-	}
-
-	return ""
-}
-
 func (b *Sheriff) HandleMessage(req *webhook.Request) core.Reply {
-	action := b.extractAction(req.Message())
+	action := req.Message()
 	requester := req.Username()
 
 	// enforce authorization

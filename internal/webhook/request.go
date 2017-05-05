@@ -35,6 +35,9 @@ type From struct {
 
 func (r Request) Message() string {
 	a := strings.Fields(r.Item.Message.Message)
+	if len(a) < 2 {
+		return ""
+	}
 	return strings.Join(a[2:], " ")
 }
 
